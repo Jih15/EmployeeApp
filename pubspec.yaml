@@ -18,6 +18,10 @@ dependencies:
   feather_icons_svg: ^0.4.0
   intl: ^0.19.0
   flutter_launcher_icons: ^0.13.1
+  fl_chart: ^0.68.0
+  loading_animation_widget: ^1.2.1
+  flutter_animate: ^4.5.0
+  cool_alert: ^2.0.1
 
 dev_dependencies:
   flutter_test:
@@ -27,6 +31,7 @@ dev_dependencies:
 flutter_icons:
   android: true
   image_path: "assets/img/logo.png"
+  icon_size : 64
 
 flutter:
   uses-material-design: true

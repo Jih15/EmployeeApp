@@ -11,11 +11,12 @@ class _KepegawaianPageState extends State<KepegawaianPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blue,
       appBar: AppBar(
         centerTitle: true,
-        title: Text('Kepegawaian'),
+        title: const Text('Kepegawaian'),
       ),
-      body: Center(
+      body: const Center(
         child: Text('Kepegawaian Page'),
       ),
     );

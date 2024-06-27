@@ -1,43 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_pegawai/model/evaluasi.dart';
+import 'package:mobile_pegawai/view/menu/evaluasi_menu.dart';
 
 class EvaluationWidget extends StatelessWidget {
+  final Map<String, dynamic> dataKaryawan;
 
-  final Evaluasi evaluasi;
-
-  EvaluationWidget({Key? key, required this.evaluasi}) : super(key: key);
+  const EvaluationWidget({Key? key, required this.dataKaryawan}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Cari nilai evaluasi terbaru
+    double nilai = 0.0;
+    String? tanggalTerbaru;
 
-    double nilaiEvaluasi = evaluasi.penilaianKinerja;
+    if (dataKaryawan['evaluasi'] != null && dataKaryawan['evaluasi'].isNotEmpty) {
+      final List<dynamic> evaluasiList = dataKaryawan['evaluasi'];
+      final latestEvaluasi = evaluasiList.last;
+      nilai = double.tryParse(latestEvaluasi['penilaian_kinerja'].toString()) ?? 0.0;
+      tanggalTerbaru = latestEvaluasi['tahun_evaluasi'].toString();
+    }
 
     return Container(
       width: double.maxFinite,
-      height: 150,
+      height: 180,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Color.fromRGBO(207, 207, 207, 1),
+          color: const Color.fromRGBO(207, 207, 207, 1),
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             Row(
               children: [
                 Text(
-                  '${evaluasi.penilaianKinerja.toStringAsFixed(0)}/${evaluasi.penilaianKinerja}',
-                  style: TextStyle(
+                  '${_formatNilai(nilai)}/100',
+                  style: const TextStyle(
                     fontSize: 35,
-                    fontWeight: FontWeight.w700
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 IconButton(
-                  onPressed: (){},
-                  icon: Icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => EvaluationMenu(dataKaryawan: dataKaryawan),),
+                    );
+                  },
+                  icon: const Icon(
                     Icons.more_horiz_rounded,
                     size: 30,
                   ),
@@ -46,57 +57,77 @@ class EvaluationWidget extends StatelessWidget {
             ),
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.show_chart,
                   color: Color.fromRGBO(16, 132, 139, 1),
                 ),
                 Text(
-                  '${nilaiEvaluasi.toStringAsFixed(0)}%',
-                  style: TextStyle(
+                  '${_formatNilai(nilai)}%',
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Color.fromRGBO(16, 132, 139, 1),
                   ),
                 ),
-                Text(
-                  ' ${evaluasi.penilaianKinerja}',
+                const Text(
+                  ' Meningkat',
                   style: TextStyle(
                     fontSize: 16,
                   ),
-                )
+                ),
               ],
             ),
-            Spacer(),
+            const Spacer(),
             Row(
               children: [
-                Text(
+                const Text(
                   'Rate',
-                  style: TextStyle(
-                    color: Colors.grey
-                  ),
+                  style: TextStyle(color: Colors.grey),
                 ),
-                Spacer(),
+                const Spacer(),
                 Text(
-                  '${nilaiEvaluasi.toStringAsFixed(0)}/${evaluasi.penilaianKinerja}',
-                  style: TextStyle(
-                      color: Colors.grey
-                  ),
+                  '${_formatNilai(nilai)}/100',
+                  style: const TextStyle(color: Colors.grey),
                 )
               ],
             ),
             LinearProgressIndicator(
-              borderRadius: BorderRadius.all(
-                Radius.circular(20)
-              ),
+              borderRadius: const BorderRadius.all(Radius.circular(20)),
               minHeight: 10,
-              value: nilaiEvaluasi / 100,
-              valueColor: AlwaysStoppedAnimation<Color>(_getNilaiEvaluasi(nilaiEvaluasi)),
-            )
+              value: nilai / 100,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                _getNilaiEvaluasi(nilai.toDouble()),
+              ),
+            ),
+            if (tanggalTerbaru != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Evaluasi terbaru pada: $tanggalTerbaru',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
-  Color _getNilaiEvaluasi(double value){
-    return Color.lerp(Color.fromRGBO(232, 89, 89, 1.0), Color.fromRGBO(16, 132, 139, 1), value/100)!;
+
+  Color _getNilaiEvaluasi(double value) {
+    return Color.lerp(
+      const Color.fromRGBO(232, 89, 89, 1.0),
+      const Color.fromRGBO(16, 132, 139, 1),
+      value / 100,
+    ) ??
+        Colors.grey;
+  }
+
+  String _formatNilai(double nilai) {
+    if (nilai == nilai.roundToDouble()) {
+      return nilai.toInt().toString();
+    }
+    return nilai.toStringAsFixed(1);
   }
 }

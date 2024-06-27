@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 class OverviewEmployee extends StatelessWidget {
@@ -14,14 +12,14 @@ class OverviewEmployee extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Color.fromRGBO(207, 207, 207, 1),
+            color: const Color.fromRGBO(207, 207, 207, 1),
           )
         ),
-        child: Padding(
-            padding: const EdgeInsets.all(20),
+        child: const Padding(
+            padding: EdgeInsets.all(20),
             child: Row(
               children: [
-                Container(
+                SizedBox(
                   width: 90,
                   height: double.maxFinite,
                   child: Column(
@@ -44,11 +42,11 @@ class OverviewEmployee extends StatelessWidget {
                 ),
                 Spacer(),
                 VerticalDivider(
-                  thickness: 1.5,
+                  thickness: 1,
                   color: Colors.black,
                 ),
                 Spacer(),
-                Container(
+                SizedBox(
                   width: 90,
                   height: double.maxFinite,
                   child: Column(
@@ -71,11 +69,11 @@ class OverviewEmployee extends StatelessWidget {
                 ),
                 Spacer(),
                 VerticalDivider(
-                  thickness: 1.5,
+                  thickness: 1,
                   color: Colors.black,
                 ),
                 Spacer(),
-                Container(
+                SizedBox(
                   width: 90,
                   height: double.maxFinite,
                   child: Column(
