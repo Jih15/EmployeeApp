@@ -10,8 +10,9 @@ import 'package:mobile_pegawai/widget/menu-widget.dart';
 class DashboardPage extends StatefulWidget {
 
   final Map<String, dynamic> dataKaryawan;
+  final Map<String, dynamic>? dataAbsen;
 
-  const DashboardPage({super.key, required this.dataKaryawan});
+  const DashboardPage({super.key, required this.dataKaryawan, this.dataAbsen});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -46,9 +47,9 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: [
           InkWell(
             onTap: (){
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => EditProfile(dataKaryawan: widget.dataKaryawan)),
-              );
+              // Navigator.of(context).push(
+              //   MaterialPageRoute(builder: (context) => EditKaryawan(dataKaryawan: widget.dataKaryawan)),
+              // );
             },
             child: CircleAvatar(
               backgroundColor: Colors.grey,
@@ -191,7 +192,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
             const SizedBox(height: 10),
-            AttendanceWidget(dataKaryawan: widget.dataKaryawan),
+            AttendanceWidget(key: UniqueKey(),),
             const SizedBox(height: 25),
             const Text(
               'MENU',
@@ -205,7 +206,7 @@ class _DashboardPageState extends State<DashboardPage> {
             MenuPage(dataKaryawan: widget.dataKaryawan),
             const SizedBox(height: 25),
             const Text(
-              'EVALUASI TERAKHIR',
+              'RATA-RATA KINERJA',
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 15,
@@ -213,7 +214,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
             const SizedBox(height: 10),
-            EvaluationWidget(dataKaryawan: widget.dataKaryawan),
+            EvaluationWidget(),
           ],
         ),
       ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:mobile_pegawai/ApiService.dart';
 import 'package:mobile_pegawai/view/main/login_page.dart';
 import 'package:mobile_pegawai/view/page/dashboard_page.dart';
-import 'package:mobile_pegawai/view/page/kepegawaian_page.dart';
+import 'package:mobile_pegawai/view/page/notification_page.dart';
 import 'package:mobile_pegawai/view/page/profile_page.dart';
 import 'package:mobile_pegawai/view/main/splash_screen.dart';
 
@@ -23,36 +24,57 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Outfit'
       ),
-      home: const LoginPage(),
+      home: const SplashScreen(),
     );
   }
 }
 
 class KepegawaianMain extends StatefulWidget {
-
-  final Map<String, dynamic> dataKaryawan;
-
-  const KepegawaianMain({super.key, required this.dataKaryawan});
+  const KepegawaianMain({super.key});
 
   @override
   State<KepegawaianMain> createState() => _KepegawaianState();
 }
+
 class _KepegawaianState extends State<KepegawaianMain> {
   int selectedPage = 0;
   final PageController _pageController = PageController();
-  late List<Widget> _pages;
+  late List<Widget> _pages = [];
+
+  Map<String, dynamic>? dataKaryawan;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
-    _pages = [
-      DashboardPage(dataKaryawan: widget.dataKaryawan),
-      const KepegawaianPage(),
-      ProfilePage(dataKaryawan: widget.dataKaryawan)
-    ];
+    getDataKaryawan();
   }
 
-  void _onTap(int index){
+  Future<void> getDataKaryawan() async {
+    try {
+      Map<String, dynamic>? fetchedData = await Api().getKaryawanData(context);
+      if (fetchedData != null) {
+        setState(() {
+          dataKaryawan = fetchedData;
+          _pages = [
+            DashboardPage(dataKaryawan: dataKaryawan!),
+            const NotificationPage(),
+            ProfilePage(dataKaryawan: dataKaryawan!),
+          ];
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengambil data karyawan')),
+        );
+      }
+    } catch (e) {
+      print('Error mengambil data karyawan: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error jaringan')),
+      );
+    }
+  }
+
+  void _onTap(int index) {
     setState(() {
       selectedPage = index;
     });
@@ -68,7 +90,7 @@ class _KepegawaianState extends State<KepegawaianMain> {
       body: PageView(
         controller: _pageController,
         children: _pages,
-        onPageChanged: (index){
+        onPageChanged: (index) {
           setState(() {
             selectedPage = index;
           });
@@ -84,7 +106,6 @@ class _KepegawaianState extends State<KepegawaianMain> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: GNav(
-              // backgroundColor: Color.fromRGBO(24, 58, 82, 1),
               selectedIndex: selectedPage,
               color: Colors.white,
               activeColor: Colors.black,
@@ -103,8 +124,8 @@ class _KepegawaianState extends State<KepegawaianMain> {
                 ),
                 GButton(
                   icon: Icons.person,
-                  text: 'Profile',
-                )
+                  text: 'Profil',
+                ),
               ],
             ),
           ),
@@ -113,4 +134,3 @@ class _KepegawaianState extends State<KepegawaianMain> {
     );
   }
 }
-

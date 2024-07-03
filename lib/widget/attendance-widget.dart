@@ -1,52 +1,223 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:mobile_pegawai/ApiService.dart';
+import 'package:mobile_pegawai/model/absensi.dart';
 
-class AttendanceWidget extends StatelessWidget {
+class AttendanceWidget extends StatefulWidget {
+  AttendanceWidget({Key? key}) : super(key: key);
 
-  final Map<String, dynamic> dataKaryawan;
+  @override
+  _AttendanceWidgetState createState() => _AttendanceWidgetState();
+}
 
-  AttendanceWidget({Key? key, required this.dataKaryawan}) : super(key: key);
+class _AttendanceWidgetState extends State<AttendanceWidget> {
+  String checkInTime = '--:--';
+  String checkOutTime = '--:--';
+  String checkInStatus = 'Belum Absen';
+  String checkOutStatus = 'Belum Absen';
 
-  final Api apiService = Api();
+  @override
+  void initState() {
+    super.initState();
+    _updateCheckInTime();
+    _updateCheckOutTime();
+  }
 
-  String calculateTimeDifference() {
-    DateTime now = DateTime.now();
-    DateTime targetTime = DateTime(now.year, now.month, now.day, 8, 0, 0);
-    Duration difference = now.difference(targetTime);
+  Future<void> _updateCheckInTime() async {
+    bool hasCheckedIn = await Api().hasCheckedInToday();
+    if (hasCheckedIn) {
+      String latestCheckInTime = await _getLatestCheckInTime();
+      setState(() {
+        checkInTime = latestCheckInTime;
+        checkInStatus = 'Sudah Absen';
+      });
+    } else {
+      setState(() {
+        checkInTime = '--:--';
+        checkInStatus = 'Belum Absen';
+      });
+    }
+  }
 
-    int differenceMinutes = difference.inMinutes.abs();
-    String prefix = difference.isNegative ? '-' : '+';
-    String status = difference.isNegative ? 'Lebih Cepat' : 'Terlambat';
+  Future<void> _updateCheckOutTime() async {
+    bool hasCheckedOut = await Api().hasCheckedOutToday();
+    if (hasCheckedOut) {
+      String latestCheckOutTime = await _getLatestCheckOutTime();
+      setState(() {
+        checkOutTime = latestCheckOutTime;
+        checkOutStatus = 'Sudah Absen';
+      });
+    } else {
+      setState(() {
+        checkOutTime = '--:--';
+        checkOutStatus = 'Belum Absen';
+      });
+    }
+  }
 
-    return '$status $prefix$differenceMinutes min';
+  Future<String> _getLatestCheckInTime() async {
+    try {
+      List<Absensi> latestRecords = await Api().getAbsenData();
+      DateTime today = DateTime.now();
+
+      for (var record in latestRecords) {
+        if (record.jamMasuk != null &&
+            record.jamMasuk!.year == today.year &&
+            record.jamMasuk!.month == today.month &&
+            record.jamMasuk!.day == today.day) {
+          return DateFormat('hh:mm a').format(record.jamMasuk!);
+        }
+      }
+      return '--:--';
+    } catch (e) {
+      print('Error fetching latest check-in time: $e');
+      return '--:--';
+    }
+  }
+
+  Future<String> _getLatestCheckOutTime() async {
+    try {
+      List<Absensi> latestRecords = await Api().getAbsenData();
+      DateTime today = DateTime.now();
+
+      for (var record in latestRecords) {
+        if (record.jamKeluar != null &&
+            record.jamKeluar!.year == today.year &&
+            record.jamKeluar!.month == today.month &&
+            record.jamKeluar!.day == today.day) {
+          return DateFormat('hh:mm a').format(record.jamKeluar!);
+        }
+      }
+      return '--:--';
+    } catch (e) {
+      print('Error fetching latest check-out time: $e');
+      return '--:--';
+    }
+  }
+
+  void _handleCheckIn(AbsenStatus status) async {
+    try {
+      await Api().checkIn();
+
+      String formattedTime = await _getLatestCheckInTime();
+
+      setState(() {
+        checkInTime = formattedTime;
+        checkInStatus = 'Sudah Absen';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Check-in berhasil pada $formattedTime'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      String errorMessage = 'Error: $e';
+      if (e is Exception) {
+        errorMessage = e.toString();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $errorMessage'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _handleCheckOut(AbsenStatus status) async {
+    try {
+      DateTime now = DateTime.now();
+      if (now.hour < 10) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Check-out hanya dapat dilakukan setelah jam 03:00 PM'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      await Api().checkOut();
+
+      String formattedTime = await _getLatestCheckOutTime();
+
+      setState(() {
+        checkOutTime = formattedTime;
+        checkOutStatus = 'Sudah Absen';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Check-out berhasil pada $formattedTime'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      String errorMessage = 'Error: $e';
+      if (e is Exception) {
+        errorMessage = e.toString();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $errorMessage'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _showCheckInDialog(BuildContext context) {
+    _handleCheckIn(AbsenStatus.hadir);
+  }
+
+  void _showCheckOutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Pilih Status Absen'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                title: Text('Hadir'),
+                onTap: () {
+                  Navigator.of(context).pop(AbsenStatus.hadir);
+                },
+              ),
+              ListTile(
+                title: Text('Izin'),
+                onTap: () {
+                  Navigator.of(context).pop(AbsenStatus.izin);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    ).then((selectedStatus) {
+      if (selectedStatus != null) {
+        _handleCheckOut(selectedStatus);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-
-    String timeDifference = calculateTimeDifference();
-    List<String> timeDifferenceParts = timeDifference.split(' ');
-
-    if (timeDifferenceParts.length < 4) {
-      timeDifferenceParts = ['Belum', 'Absen', ' - - - ', ''];
-    }
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        InkWell(
+        // CheckIn
+        GestureDetector(
           onTap: () {
-            apiService.checkIn(dataKaryawan['id_karyawan']).then((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Berhasil melakukan absen masuk!')),
-              );
-            }).catchError((error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(error.toString())),
-              );
-            });
+            _handleCheckIn(AbsenStatus.hadir);
+          },
+          onLongPress: () {
+            _showCheckInDialog(context);
           },
           child: Container(
             width: 180,
@@ -83,9 +254,9 @@ class AttendanceWidget extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
-                  const Text(
-                    '08:00 am',
-                    style: TextStyle(
+                  Text(
+                    checkInTime,
+                    style: const TextStyle(
                       fontSize: 27,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -94,16 +265,17 @@ class AttendanceWidget extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '${timeDifferenceParts[0]} ${timeDifferenceParts[1]}',
+                        'Status',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w300,
-                          color: Color.fromRGBO(255, 255, 255, 1.0),
+                          color: Colors.white,
                           height: 0,
                         ),
                       ),
                       const SizedBox(width: 3,),
                       Container(
+                        padding: EdgeInsets.symmetric(vertical: 2, horizontal: 1),
                         height: 15,
                         decoration: ShapeDecoration(
                           color: const Color.fromRGBO(31, 189, 123, 1),
@@ -113,7 +285,7 @@ class AttendanceWidget extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            '${timeDifferenceParts[2]} ${timeDifferenceParts[3]}',
+                            checkInStatus,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -130,17 +302,13 @@ class AttendanceWidget extends StatelessWidget {
           ),
         ),
         const Spacer(),
-        InkWell(
+        // CheckOut
+        GestureDetector(
           onTap: () {
-            apiService.checkOut(dataKaryawan['id_absen']).then((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Berhasil melakukan absen keluar!')),
-              );
-            }).catchError((error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(error.toString())),
-              );
-            });
+            _handleCheckOut(AbsenStatus.hadir);
+          },
+          onLongPress: () {
+            _showCheckOutDialog(context);
           },
           child: Container(
             width: 180,
@@ -177,26 +345,46 @@ class AttendanceWidget extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
-                  const Text(
-                    '05:00 pm',
-                    style: TextStyle(
+                  Text(
+                    checkOutTime,
+                    style: const TextStyle(
                       fontSize: 27,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
-                  const Row(
+                  Row(
                     children: [
                       Text(
-                        'Lebih Cepat',
-                        style: TextStyle(
+                        'Status',
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w300,
-                          color: Color.fromRGBO(255, 255, 255, 1.0),
+                          color: Colors.white,
                           height: 0,
                         ),
                       ),
-                      SizedBox(width: 3,),
+                      const SizedBox(width: 3,),
+                      Container(
+                        padding: EdgeInsets.symmetric(vertical: 2, horizontal: 1),
+                        height: 15,
+                        decoration: ShapeDecoration(
+                          color: const Color.fromRGBO(31, 189, 123, 1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            checkOutStatus,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      )
                     ],
                   )
                 ],
@@ -207,4 +395,9 @@ class AttendanceWidget extends StatelessWidget {
       ],
     );
   }
+}
+
+enum AbsenStatus {
+  hadir,
+  izin,
 }

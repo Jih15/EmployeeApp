@@ -1,24 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:mobile_pegawai/ApiService.dart';
+import 'package:mobile_pegawai/model/evaluasi.dart';
 import 'package:mobile_pegawai/view/menu/evaluasi_menu.dart';
 
-class EvaluationWidget extends StatelessWidget {
-  final Map<String, dynamic> dataKaryawan;
+class EvaluationWidget extends StatefulWidget {
+  const EvaluationWidget({Key? key}) : super(key: key);
 
-  const EvaluationWidget({Key? key, required this.dataKaryawan}) : super(key: key);
+  @override
+  State<EvaluationWidget> createState() => _EvaluationWidgetState();
+}
+
+class _EvaluationWidgetState extends State<EvaluationWidget> {
+  List<Evaluasi> evaluasiList = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEvaluasiData();
+  }
+
+  Future<void> _fetchEvaluasiData() async {
+    try {
+      List<Evaluasi> data = await Api().getEvaluasiData();
+      setState(() {
+        evaluasiList = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching evaluasi data: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  double _calculateAverageRating(List<Evaluasi> evaluasiList) {
+    if (evaluasiList.isEmpty) return 0.0;
+
+    double totalRating = 0;
+    for (var evaluasi in evaluasiList) {
+      totalRating += evaluasi.penilaianKinerja.toDouble();
+    }
+
+    return totalRating / evaluasiList.length;
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Cari nilai evaluasi terbaru
-    double nilai = 0.0;
-    String? tanggalTerbaru;
-
-    if (dataKaryawan['evaluasi'] != null && dataKaryawan['evaluasi'].isNotEmpty) {
-      final List<dynamic> evaluasiList = dataKaryawan['evaluasi'];
-      final latestEvaluasi = evaluasiList.last;
-      nilai = double.tryParse(latestEvaluasi['penilaian_kinerja'].toString()) ?? 0.0;
-      tanggalTerbaru = latestEvaluasi['tahun_evaluasi'].toString();
-    }
-
     return Container(
       width: double.maxFinite,
       height: 180,
@@ -35,7 +65,7 @@ class EvaluationWidget extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '${_formatNilai(nilai)}/100',
+                  '${_calculateAverageRating(evaluasiList).toStringAsFixed(1)}/100',
                   style: const TextStyle(
                     fontSize: 35,
                     fontWeight: FontWeight.w700,
@@ -45,7 +75,7 @@ class EvaluationWidget extends StatelessWidget {
                 IconButton(
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => EvaluationMenu(dataKaryawan: dataKaryawan),),
+                      MaterialPageRoute(builder: (context) => EvaluationMenu()),
                     );
                   },
                   icon: const Icon(
@@ -57,23 +87,18 @@ class EvaluationWidget extends StatelessWidget {
             ),
             Row(
               children: [
-                const Icon(
-                  Icons.show_chart,
-                  color: Color.fromRGBO(16, 132, 139, 1),
-                ),
-                Text(
-                  '${_formatNilai(nilai)}%',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color.fromRGBO(16, 132, 139, 1),
+                if (evaluasiList.length > 1)
+                  Text(
+                    evaluasiList.last.penilaianKinerja.toDouble() > evaluasiList[evaluasiList.length - 2].penilaianKinerja.toDouble() ? ' Meningkat' : ' Menurun',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: evaluasiList.length > 1
+                          ? evaluasiList.last.penilaianKinerja.toDouble() > evaluasiList[evaluasiList.length - 2].penilaianKinerja.toDouble()
+                          ? Color.fromRGBO(16, 132, 139, 1)
+                          : const Color.fromRGBO(232, 89, 89, 1)
+                          : Colors.black,
+                    ),
                   ),
-                ),
-                const Text(
-                  ' Meningkat',
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
               ],
             ),
             const Spacer(),
@@ -85,7 +110,7 @@ class EvaluationWidget extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${_formatNilai(nilai)}/100',
+                  '${_calculateAverageRating(evaluasiList).toStringAsFixed(1)}/100',
                   style: const TextStyle(color: Colors.grey),
                 )
               ],
@@ -93,17 +118,17 @@ class EvaluationWidget extends StatelessWidget {
             LinearProgressIndicator(
               borderRadius: const BorderRadius.all(Radius.circular(20)),
               minHeight: 10,
-              value: nilai / 100,
+              value: _calculateAverageRating(evaluasiList) / 100,
               valueColor: AlwaysStoppedAnimation<Color>(
-                _getNilaiEvaluasi(nilai.toDouble()),
+                _getNilaiEvaluasi(_calculateAverageRating(evaluasiList)),
               ),
             ),
-            if (tanggalTerbaru != null)
+            if (evaluasiList.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                  'Evaluasi terbaru pada: $tanggalTerbaru',
-                  style: TextStyle(
+                  'Evaluasi terbaru pada: ${DateFormat('dd MMM yyyy').format(evaluasiList.last.tahunEvaluasi)}',
+                  style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 12,
                   ),
@@ -122,12 +147,5 @@ class EvaluationWidget extends StatelessWidget {
       value / 100,
     ) ??
         Colors.grey;
-  }
-
-  String _formatNilai(double nilai) {
-    if (nilai == nilai.roundToDouble()) {
-      return nilai.toInt().toString();
-    }
-    return nilai.toStringAsFixed(1);
   }
 }

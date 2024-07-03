@@ -1,4 +1,6 @@
-class Gaji{
+import 'package:intl/intl.dart';
+
+class Gaji {
   final int idGaji;
   final int idKaryawan;
   final int gajiPokok;
@@ -16,10 +18,10 @@ class Gaji{
     required this.bonus,
     required this.potongan,
     required this.totalGaji,
-    required this.tanggalPenggajian
+    required this.tanggalPenggajian,
   });
 
-  factory Gaji.fromJson(Map<String, dynamic> json){
+  factory Gaji.fromJson(Map<String, dynamic> json) {
     return Gaji(
       idGaji: json['id_gaji'],
       idKaryawan: json['id_karyawan'],
@@ -28,20 +30,7 @@ class Gaji{
       bonus: json['bonus'],
       potongan: json['potongan'],
       totalGaji: json['total_gaji'],
-      tanggalPenggajian: json['tanggal_penggajian'],
+      tanggalPenggajian: DateTime.parse(json['tanggal_penggajian']),
     );
-  }
-
-  Map<String, dynamic> toJson(){
-    return {
-      'id_gaji' : idGaji,
-      'id_karyawan' : idKaryawan,
-      'gaji_pokok' : gajiPokok,
-      'tunjangan' : tunjangan,
-      'bonus' : bonus,
-      'potongan' : potongan,
-      'total_gaji' : totalGaji,
-      'tanggal_penggajian' : tanggalPenggajian
-    };
   }
 }

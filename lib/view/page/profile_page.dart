@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_pegawai/ApiService.dart';
 import 'package:mobile_pegawai/view/main/login_page.dart';
+import 'package:mobile_pegawai/view/menu/evaluasi_menu.dart';
+import 'package:mobile_pegawai/view/menu/gaji_menu.dart';
 import 'package:mobile_pegawai/view/page/editprofile_page.dart';
 import 'package:mobile_pegawai/widget/overview-widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,14 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ProfilePage extends StatefulWidget {
   final Map<String, dynamic> dataKaryawan;
 
-  const ProfilePage({super.key, required this.dataKaryawan});
+  const ProfilePage({Key? key, required this.dataKaryawan}) : super(key: key);
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-
   bool _isLoading = false;
   Api apiService = Api();
 
@@ -25,19 +26,13 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     try {
-      SharedPreferences pref = await SharedPreferences.getInstance();
-      String? token = pref.getString('token');
-
-      final response = await apiService.logout(token!);
+      final response = await apiService.logout();
 
       setState(() {
         _isLoading = false;
       });
 
       if (response['success'] == true) {
-        await pref.remove('token');
-        await pref.remove('data_karyawan');
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(response['message'] ?? 'Logout berhasil')),
         );
@@ -68,39 +63,36 @@ class _ProfilePageState extends State<ProfilePage> {
         title: const Text('Profil'),
         centerTitle: true,
       ),
-      body: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Hero(
-                    tag: 'profile',
-                    child: Container(
-                      width: 145,
-                      height: 145,
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        boxShadow: const [],
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Image.network(
-                        widget.dataKaryawan['foto'],
-                        fit: BoxFit.cover,
-                      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Hero(
+                  tag: 'profile',
+                  child: Container(
+                    width: 145,
+                    height: 145,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Colors.grey,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Image.network(
+                      widget.dataKaryawan['foto'],
+                      fit: BoxFit.cover,
                     ),
                   ),
-                  SizedBox(width: 20,),
-                  Column(
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${widget.dataKaryawan['nama_depan']}'+' '+'${widget.dataKaryawan['nama_belakang']}',
+                        '${widget.dataKaryawan['nama_depan']} ${widget.dataKaryawan['nama_belakang']}',
                         style: const TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w600,
@@ -113,120 +105,156 @@ class _ProfilePageState extends State<ProfilePage> {
                           fontWeight: FontWeight.w200,
                         ),
                       ),
-                      SizedBox(height: 20,),
+                      const SizedBox(height: 20),
                       SizedBox(
-                        width: 120,
+                        width: 135,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: (){
+                          onPressed: () {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (context) => EditProfile(dataKaryawan: widget.dataKaryawan)),
+                              MaterialPageRoute(
+                                builder: (context) => EditKaryawan(dataKaryawan: widget.dataKaryawan),
+                              ),
                             );
                           },
-                          child: Text(
-                            'Edit Profile',
-                            style: TextStyle(
-                              color: Colors.black
-                            ),
+                          child: const Text(
+                            'Edit Account',
+                            style: TextStyle(color: Colors.black),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             elevation: 0,
                             foregroundColor: Colors.grey,
-                            side: BorderSide(
+                            side: const BorderSide(
                               color: Colors.grey,
                               width: 0.5,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)
-                            )
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(12)),
+                            ),
                           ),
                         ),
-                      )
-                    ],
-                  )
-                ],
-              ),
-              SizedBox(height: 20,),
-              const Text(
-                'DATA',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              SizedBox(height: 10,),
-              OverviewEmployee(),
-              SizedBox(height: 20,),
-              const Text(
-                'ABOUT ME',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              ListView(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.wallet_rounded),
-                    title: Text('Gaji'),
-                    trailing: Icon(Icons.chevron_right),
-                    onTap: () {
-
-                    },
-                  ),
-                  Divider(),
-                  ListTile(
-                    leading: Icon(Icons.pie_chart),
-                    title: Text('Evaluasi'),
-                    trailing: Icon(Icons.chevron_right),
-                    onTap: () {
-
-                    },
-                  ),
-                  Divider(),
-                  ListTile(
-                    leading: Icon(Icons.notifications_on_rounded),
-                    title: Text('Notifikasi'),
-                    trailing: Icon(Icons.chevron_right),
-                    onTap: () {
-
-                    },
-                  ),
-                ],
-              ),
-              Center(
-                child: SizedBox(
-                  width: 250,
-                  height: 55,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      _logout();
-                    },
-                    child: const Text(
-                      'Logout',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
                       ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'DATA',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            OverviewEmployee(), // Widget untuk menampilkan ringkasan data karyawan
+            const SizedBox(height: 20),
+            const Text(
+              'ABOUT ME',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Karyawan'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => EditKaryawan(dataKaryawan: widget.dataKaryawan),
+                  ),
+                ).then((value) {
+                  if (value != null && value) {
+                    _refreshDataKaryawan();
+                  }
+                });
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.wallet_rounded),
+              title: const Text('Gaji'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => GajiMenu(),)
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.pie_chart),
+              title: const Text('Evaluasi'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => EvaluationMenu()),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.notifications_on_rounded),
+              title: const Text('Notifikasi'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                // Navigasi ke halaman notifikasi
+              },
+            ),
+            const Divider(),
+            Center(
+              child: SizedBox(
+                width: 250,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: _logout,
+                  child: const Text(
+                    'Logout',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)
-                      )
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
-              )
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  void _refreshDataKaryawan() async {
+    try {
+      Map<String, dynamic>? fetchedData = await Api().getKaryawanData(context);
+      if (fetchedData != null) {
+        setState(() {
+          widget.dataKaryawan.clear();
+          widget.dataKaryawan.addAll(fetchedData);
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal mengambil data karyawan')),
+        );
+      }
+    } catch (e) {
+      print('Error mengambil data karyawan: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error jaringan')),
+      );
+    }
   }
 }

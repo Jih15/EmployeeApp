@@ -1,109 +1,160 @@
-// import 'package:fl_chart/fl_chart.dart';
-// import 'package:flutter/material.dart';
-//
-// class TestChart extends StatelessWidget {
-//   final Map<String, dynamic> evaluationDataList;
-//
-//   const TestChart({Key? key, required this.evaluationDataList}) : super(key: key);
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return BarChart(
-//       BarChartData(
-//         barTouchData: barTouchData,
-//         titlesData: titlesData,
-//         borderData: borderData,
-//         barGroups: barGroups,
-//         gridData: const FlGridData(show: false),
-//         alignment: BarChartAlignment.spaceAround,
-//         maxY: 20, // Adjust according to your data
-//       ),
-//     );
-//   }
-//
-//   BarTouchData get barTouchData => BarTouchData(
-//     enabled: false,
-//     touchTooltipData: BarTouchTooltipData(
-//       getTooltipColor: (group) => Colors.transparent,
-//       tooltipPadding: EdgeInsets.zero,
-//       tooltipMargin: 8,
-//       getTooltipItem: (
-//           BarChartGroupData group,
-//           int groupIndex,
-//           BarChartRodData rod,
-//           int rodIndex,
-//           ) {
-//         return BarTooltipItem(
-//           rod.toY.toString(),
-//           const TextStyle(
-//             color: Color.fromRGBO(61, 211, 165, 1.0),
-//             fontWeight: FontWeight.bold,
-//           ),
-//         );
-//       },
-//     ),
-//   );
-//
-//   Widget getTitles(double value, TitleMeta meta) {
-//     const style = TextStyle(
-//       color: Color.fromRGBO(27, 59, 86, 1.0),
-//       fontWeight: FontWeight.bold,
-//       fontSize: 14,
-//     );
-//     return SideTitleWidget(
-//       axisSide: meta.axisSide,
-//       space: 4,
-//       child: Text(evaluationDataList[value.toInt()].month, style: style),
-//     );
-//   }
-//
-//   FlTitlesData get titlesData => FlTitlesData(
-//     show: true,
-//     bottomTitles: AxisTitles(
-//       sideTitles: SideTitles(
-//         showTitles: true,
-//         reservedSize: 30,
-//         getTitlesWidget: getTitles,
-//       ),
-//     ),
-//     leftTitles: const AxisTitles(
-//       sideTitles: SideTitles(showTitles: false),
-//     ),
-//     topTitles: const AxisTitles(
-//       sideTitles: SideTitles(showTitles: false),
-//     ),
-//     rightTitles: const AxisTitles(
-//       sideTitles: SideTitles(showTitles: false),
-//     ),
-//   );
-//
-//   FlBorderData get borderData => FlBorderData(
-//     show: false,
-//   );
-//
-//   LinearGradient get _barsGradient => const LinearGradient(
-//     colors: [
-//       Color.fromRGBO(27, 59, 86, 1.0),
-//       Color.fromRGBO(61, 211, 165, 1.0),
-//     ],
-//     begin: Alignment.bottomCenter,
-//     end: Alignment.topCenter,
-//   );
-//
-//   List<BarChartGroupData> get barGroups {
-//     return evaluationDataList.asMap().entries.map((entry) {
-//       final index = entry.key;
-//       final data = entry.value;
-//       return BarChartGroupData(
-//         x: index,
-//         barRods: [
-//           BarChartRodData(
-//             toY: data.rating,
-//             color: _barsGradient.colors[0],
-//           )
-//         ],
-//         showingTooltipIndicators: [0],
-//       );
-//     }).toList();
-//   }
-// }
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:mobile_pegawai/ApiService.dart';
+import 'package:mobile_pegawai/model/evaluasi.dart';
+
+class EvaluasiChart extends StatelessWidget {
+  const EvaluasiChart({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Evaluasi>>(
+      future: Api().getEvaluasiData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (snapshot.hasData) {
+          List<Evaluasi> evaluationDataList = snapshot.data!;
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Activity',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Expanded(
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceBetween,
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 20,
+                            getTitlesWidget: leftTitles,
+                            reservedSize: 30,
+                          ),
+                        ),
+                        rightTitles: const AxisTitles(),
+                        topTitles: const AxisTitles(),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: bottomTitles,
+                            reservedSize: 28,
+                          ),
+                        ),
+                      ),
+                      barTouchData: BarTouchData(enabled: false),
+                      borderData: FlBorderData(show: false),
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: 20,
+                        getDrawingHorizontalLine: (value) {
+                          return FlLine(
+                            color: Colors.grey.withOpacity(0.5),
+                            strokeWidth: 1,
+                          );
+                        },
+                      ),
+                      barGroups: generateBarGroups(evaluationDataList),
+                      maxY: 100,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          return Center(child: Text('No data available'));
+        }
+      },
+    );
+  }
+
+  List<BarChartGroupData> generateBarGroups(List<Evaluasi> evaluationDataList) {
+    return evaluationDataList.asMap().entries.map((entry) {
+      final index = entry.key;
+      final data = entry.value;
+      return BarChartGroupData(
+        x: index,
+        barRods: [
+          BarChartRodData(
+            fromY: 0,
+            toY: data.penilaianKinerja,
+            color: Colors.purple,
+            width: 10,
+          ),
+        ],
+      );
+    }).toList();
+  }
+
+  Widget leftTitles(double value, TitleMeta meta) {
+    const style = TextStyle(fontSize: 12);
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      child: Text(value.toInt().toString(), style: style),
+    );
+  }
+
+  Widget bottomTitles(double value, TitleMeta meta) {
+    const style = TextStyle(fontSize: 12);
+    String text;
+    switch (value.toInt()) {
+      case 0:
+        text = 'JAN';
+        break;
+      case 1:
+        text = 'FEB';
+        break;
+      case 2:
+        text = 'MAR';
+        break;
+      case 3:
+        text = 'APR';
+        break;
+      case 4:
+        text = 'MAY';
+        break;
+      case 5:
+        text = 'JUN';
+        break;
+      case 6:
+        text = 'JUL';
+        break;
+      case 7:
+        text = 'AUG';
+        break;
+      case 8:
+        text = 'SEP';
+        break;
+      case 9:
+        text = 'OCT';
+        break;
+      case 10:
+        text = 'NOV';
+        break;
+      case 11:
+        text = 'DEC';
+        break;
+      default:
+        text = '';
+    }
+    return SideTitleWidget(
+      axisSide: meta.axisSide,
+      child: Text(text, style: style),
+    );
+  }
+}

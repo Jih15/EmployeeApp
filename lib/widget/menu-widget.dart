@@ -18,14 +18,14 @@ class MenuPage extends StatelessWidget {
         InkWell(
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => EvaluationMenu(dataKaryawan: dataKaryawan)),
+              MaterialPageRoute(builder: (context) => EvaluationMenu()),
             );
           },
           child: Column(
             children: [
               Container(
-                width: 65,
-                height: 65,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
                     color: const Color.fromRGBO(224, 230, 234, 1),
                     borderRadius: BorderRadius.circular(10)
@@ -39,31 +39,31 @@ class MenuPage extends StatelessWidget {
             ],
           ),
         ),
-        const Spacer(),
-        InkWell(
-          onTap: () {
-            Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const KaryawanMenu(),)
-            );
-          },
-          child: Column(
-            children: [
-              Container(
-                width: 65,
-                height: 65,
-                decoration: BoxDecoration(
-                    color: const Color.fromRGBO(224, 230, 234, 1),
-                    borderRadius: BorderRadius.circular(10)
-                ),
-                child: Image.asset(
-                  'assets/ico/saya.png',
-                  scale: (1/0.7),
-                ),
-              ),
-              const Text('Karyawan')
-            ],
-          ),
-        ),
+        // const Spacer(),
+        // InkWell(
+        //   onTap: () {
+        //     Navigator.of(context).push(
+        //         MaterialPageRoute(builder: (context) => const KaryawanMenu(),)
+        //     );
+        //   },
+        //   child: Column(
+        //     children: [
+        //       Container(
+        //         width: 80,
+        //         height: 80,
+        //         decoration: BoxDecoration(
+        //             color: const Color.fromRGBO(224, 230, 234, 1),
+        //             borderRadius: BorderRadius.circular(10)
+        //         ),
+        //         child: Image.asset(
+        //           'assets/ico/saya.png',
+        //           scale: (1/0.7),
+        //         ),
+        //       ),
+        //       const Text('Karyawan')
+        //     ],
+        //   ),
+        // ),
         const Spacer(),
         InkWell(
           onTap: () {
@@ -74,8 +74,8 @@ class MenuPage extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                width: 65,
-                height: 65,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
                     color: const Color.fromRGBO(224, 230, 234, 1),
                     borderRadius: BorderRadius.circular(10)
@@ -99,8 +99,8 @@ class MenuPage extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                width: 65,
-                height: 65,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
                     color: const Color.fromRGBO(224, 230, 234, 1),
                     borderRadius: BorderRadius.circular(10)
@@ -118,14 +118,14 @@ class MenuPage extends StatelessWidget {
         InkWell(
           onTap: () {
             Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => GajiMenu(dataGajiKaryawan: dataKaryawan,),)
+                MaterialPageRoute(builder: (context) => GajiMenu(),)
             );
           },
           child: Column(
             children: [
               Container(
-                width: 65,
-                height: 65,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
                     color: const Color.fromRGBO(224, 230, 234, 1),
                     borderRadius: BorderRadius.circular(10)

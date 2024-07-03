@@ -1,6 +1,4 @@
 import 'posisi.dart';
-import 'gaji.dart';
-import 'evaluasi.dart';
 
 class Karyawan {
   int idKaryawan;
@@ -10,15 +8,13 @@ class Karyawan {
   int idPosisi;
   int idManager;
   String jenisKelamin;
-  String tglLahir;
+  DateTime tglLahir;
   String alamat;
   String noTelp;
   String email;
-  String tglMasuk;
+  DateTime tglMasuk;
   String foto;
   Posisi posisi;
-  List<Gaji> gaji;
-  List<Evaluasi> evaluasi;
 
   Karyawan({
     required this.idKaryawan,
@@ -35,8 +31,6 @@ class Karyawan {
     required this.tglMasuk,
     required this.foto,
     required this.posisi,
-    required this.gaji,
-    required this.evaluasi,
   });
 
   factory Karyawan.fromJson(Map<String, dynamic> json) {
@@ -48,15 +42,13 @@ class Karyawan {
       idPosisi: json['id_posisi'],
       idManager: json['id_manager'],
       jenisKelamin: json['jenis_kelamin'],
-      tglLahir: json['tgl_lahir'],
+      tglLahir: DateTime.parse(json['tgl_lahir']),
       alamat: json['alamat'],
       noTelp: json['no_telp'],
       email: json['email'],
-      tglMasuk: json['tgl_masuk'],
+      tglMasuk: DateTime.parse(json['tgl_masuk']),
       foto: json['foto'],
       posisi: Posisi.fromJson(json['posisi']),
-      gaji: (json['gaji'] as List).map((i) => Gaji.fromJson(i)).toList(),
-      evaluasi: (json['evaluasi'] as List).map((i) => Evaluasi.fromJson(i)).toList(),
     );
   }
 }

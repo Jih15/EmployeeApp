@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_pegawai/ApiService.dart';
 import 'package:mobile_pegawai/main.dart';
 import 'package:mobile_pegawai/view/main/loading_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -30,12 +28,17 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text.trim(),
       );
 
-      if (response['success']) {
-        SharedPreferences pref = await SharedPreferences.getInstance();
-        pref.setString('token', response['token']);
+      print('Login response: $response');
 
-        // Fetch karyawan data after login
-        await _apiService.getKaryawanData(response['token'], context);
+      if (response['success']) {
+        await _apiService.getKaryawanData(context);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => KepegawaianMain(),
+          ),
+        );
       } else {
         setState(() {
           _isLoading = false;
@@ -73,8 +76,11 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
+      print('Error: $e'); // Cetak error untuk debugging
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {

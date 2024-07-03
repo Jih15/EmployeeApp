@@ -1,45 +1,78 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Import paket intl untuk format tanggal
+import 'package:mobile_pegawai/ApiService.dart';
+import 'package:mobile_pegawai/model/evaluasi.dart';
+import 'package:mobile_pegawai/widget/evaluationchart-widget.dart';
 
 class EvaluationMenu extends StatefulWidget {
-  final Map<String, dynamic> dataKaryawan;
-
-  const EvaluationMenu({Key? key, required this.dataKaryawan}) : super(key: key);
+  const EvaluationMenu({Key? key}) : super(key: key);
 
   @override
   State<EvaluationMenu> createState() => _EvaluationMenuState();
 }
 
 class _EvaluationMenuState extends State<EvaluationMenu> {
-  late List<dynamic> evaluasiList;
+  List<Evaluasi> evaluasiList = [];
   String currentSortOption = 'URUTKAN';
+  bool isLoading = true;
+  String? namaKaryawan;
+  String? posisi;
 
   @override
   void initState() {
     super.initState();
-    evaluasiList = List.from(widget.dataKaryawan['evaluasi']);
+    _fetchEvaluasiData();
+  }
+
+  Future<void> _fetchEvaluasiData() async {
+    final Map<String, dynamic>? karyawanData = await Api().getKaryawanData(context);
+
+    try {
+      List<Evaluasi> data = await Api().getEvaluasiData();
+      setState(() {
+        evaluasiList = data;
+        isLoading = false;
+        namaKaryawan = karyawanData?['nama_depan'];
+        posisi = karyawanData?['posisi']['nama_posisi'];
+      });
+    } catch (e) {
+      print('Error fetching evaluasi data: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   void sortEvaluasi() {
     setState(() {
       switch (currentSortOption) {
         case 'TERBARU':
-          evaluasiList.sort((a, b) => b['tahun_evaluasi'].compareTo(a['tahun_evaluasi']));
+          evaluasiList.sort((a, b) => b.tahunEvaluasi.compareTo(a.tahunEvaluasi));
           break;
         case 'TERLAMA':
-          evaluasiList.sort((a, b) => a['tahun_evaluasi'].compareTo(b['tahun_evaluasi']));
+          evaluasiList.sort((a, b) => a.tahunEvaluasi.compareTo(b.tahunEvaluasi));
           break;
         case 'TERTINGGI':
-          evaluasiList.sort((a, b) => double.parse(b['penilaian_kinerja']).compareTo(double.parse(a['penilaian_kinerja'])));
+          evaluasiList.sort((a, b) => b.penilaianKinerja.compareTo(a.penilaianKinerja));
           break;
         case 'TERENDAH':
-          evaluasiList.sort((a, b) => double.parse(a['penilaian_kinerja']).compareTo(double.parse(b['penilaian_kinerja'])));
+          evaluasiList.sort((a, b) => a.penilaianKinerja.compareTo(b.penilaianKinerja));
           break;
         default:
-          evaluasiList = List.from(widget.dataKaryawan['evaluasi']);
-          currentSortOption = 'URUTKAN';
           break;
       }
     });
+  }
+
+  double _calculateAverageRating() {
+    if (evaluasiList.isEmpty) return 0.0;
+
+    double totalRating = 0;
+    for (var evaluasi in evaluasiList) {
+      totalRating += evaluasi.penilaianKinerja.toDouble();
+    }
+
+    return totalRating / evaluasiList.length;
   }
 
   @override
@@ -50,7 +83,9 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -62,7 +97,7 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${widget.dataKaryawan['nama_depan']} ${widget.dataKaryawan['nama_belakang']}',
+                          namaKaryawan ?? 'Nama Karyawan',
                           style: const TextStyle(
                             color: Colors.black,
                             fontSize: 25,
@@ -70,7 +105,7 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
                           ),
                         ),
                         Text(
-                          widget.dataKaryawan['posisi']['nama_posisi'],
+                          posisi ?? 'Posisi Karyawan',
                           style: const TextStyle(
                             color: Colors.black,
                             fontSize: 15,
@@ -101,26 +136,27 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
                   ],
                 ),
                 const SizedBox(height: 25),
-                const Text(
-                  'PROGRESS',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  height: 350,
-                  decoration: BoxDecoration(
-                      color: const Color.fromRGBO(224, 230, 234, 1),
-                      borderRadius: BorderRadius.circular(20)
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(15),
-                    child: null,
-                  ),
-                ),
+                // const Text(
+                //   'PROGRESS',
+                //   style: TextStyle(
+                //     color: Colors.grey,
+                //     fontSize: 15,
+                //     fontWeight: FontWeight.w700,
+                //   ),
+                // ),
+                // const SizedBox(height: 10),
+                // Container(
+                //   height: 350,
+                //   clipBehavior: Clip.antiAlias,
+                //   decoration: BoxDecoration(
+                //     color: const Color.fromRGBO(224, 230, 234, 1),
+                //     borderRadius: BorderRadius.circular(20),
+                //   ),
+                //   child: Padding(
+                //     padding: const EdgeInsets.all(15),
+                //     child: EvaluasiChart(),
+                //   ),
+                // ),
                 // Sorting button
                 Row(
                   children: [
@@ -171,7 +207,7 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
                 ),
                 // List of sorted evaluations
                 SizedBox(
-                  height: 310,
+                  height: double.maxFinite,
                   child: ListView.builder(
                     padding: EdgeInsets.symmetric(horizontal: 4),
                     itemCount: evaluasiList.length,
@@ -194,7 +230,7 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
                           ),
                           child: ListTile(
                             title: Text(
-                              evaluasi['tahun_evaluasi'],
+                              DateFormat('dd MMM yyyy').format(evaluasi.tahunEvaluasi),
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 18,
@@ -202,11 +238,11 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
                               ),
                             ),
                             subtitle: Text(
-                              evaluasi['catatan'],
+                              evaluasi.catatan,
                               style: const TextStyle(color: Colors.grey),
                             ),
                             trailing: Text(
-                              evaluasi['penilaian_kinerja'],
+                              evaluasi.penilaianKinerja.toString(),
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 18,
@@ -225,16 +261,5 @@ class _EvaluationMenuState extends State<EvaluationMenu> {
         ),
       ),
     );
-  }
-
-  double _calculateAverageRating() {
-    if (evaluasiList.isEmpty) return 0.0;
-
-    double totalRating = 0;
-    for (var evaluasi in evaluasiList) {
-      totalRating += double.parse(evaluasi['penilaian_kinerja']);
-    }
-
-    return totalRating / evaluasiList.length;
   }
 }
