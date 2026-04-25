@@ -63,7 +63,9 @@ class EmployeeProfile(Base):
 
     # Relationship
     user: Mapped["User"] = relationship(back_populates="profile")
-    office_location: Mapped["OfficeLocation | None"] = relationship()
+    office_location: Mapped["OfficeLocation | None"] = relationship(
+        back_populates="employees"
+    )
 
-    def __repr__(self):
-        return f"<EmployeeProfile {self.employee_number | self.full_name}>"
+    def __repr__(self)-> str:
+        return f"<EmployeeProfile {self.employee_number or self.full_name}>"

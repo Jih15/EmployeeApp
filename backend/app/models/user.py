@@ -20,7 +20,7 @@ class User(Base):
     )
 
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(mapped_column(String(255)))
+    hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.EMPLOYEE)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -50,4 +50,4 @@ class User(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<User {self.id} | {self.role}>"
+        return f"<User {self.user_id} | {self.role}>"
