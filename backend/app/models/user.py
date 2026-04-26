@@ -15,7 +15,7 @@ class User(Base):
     __tablename__ = "users"
 
     # PK
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
@@ -49,5 +49,35 @@ class User(Base):
         lazy="select"
     )
 
+    attendances: Mapped[list["Attendance"]] = relationship(
+        back_populates="employee",
+        foreign_keys="Attendance.employee_id"
+    )
+
+    leave_requests: Mapped[list["LeaveRequest"]] = relationship(
+        back_populates="employee",
+        foreign_keys="LeaveRequest.employee_id"
+    )
+
+    reviewed_leaves: Mapped[list["LeaveRequest"]] = relationship(
+        back_populates="reviewer",
+        foreign_keys="LeaveRequest.reviewed_by"
+    )
+
+    payroll_records: Mapped[list["PayrollRecord"]] = relationship(
+        back_populates="employee",
+        foreign_keys="PayrollRecord.employee_id"
+    )
+
+    finalized_periods: Mapped[list["PayrollPeriod"]] = relationship(
+        back_populates="finalizer",
+        foreign_keys="PayrollPeriod.finalized_by"
+    )
+    
+    registered_face_data: Mapped[list["EmployeeFaceData"]] = relationship(
+        back_populates="registrar",
+        foreign_keys="EmployeeFaceData.registered_by"
+    )
+
     def __repr__(self) -> str:
-        return f"<User {self.user_id} | {self.role}>"
+        return f"<User {self.id} | {self.role}>"

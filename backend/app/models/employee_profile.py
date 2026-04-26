@@ -8,10 +8,10 @@ from app.config.database import Base
 class EmployeeProfile(Base):
     __tablename__ = "employee_profiles"
 
-    # FK ke Users sekaligus jadi PK (user_id sudah cukup jadi identifier)
+    # FK ke Users sekaligus jadi PK (id user sudah cukup jadi identifier)
     employee_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True
     )
 

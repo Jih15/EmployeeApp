@@ -16,7 +16,7 @@ class PayrollRecord(Base):
     __tablename__ = "payroll_records"
     __table_args__ = (
         # 1 karyawan 1 record per period
-        UniqueConstraint("employee_id", "period_id", name="uq_payroll_employee_period")
+        UniqueConstraint("employee_id", "period_id", name="uq_payroll_employee_period"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -24,7 +24,7 @@ class PayrollRecord(Base):
     )
     employee_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.user_id", ondelete="RESTRICT"),
+        ForeignKey("users.id", ondelete="RESTRICT"),
         index=True
     )
     period_id: Mapped[uuid.UUID] = mapped_column(

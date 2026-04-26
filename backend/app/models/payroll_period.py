@@ -34,7 +34,7 @@ class PayrollPeriod(Base):
     )
     finalized_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.user_id", ondelete="SET NULL"),
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )
 

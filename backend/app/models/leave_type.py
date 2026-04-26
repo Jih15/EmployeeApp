@@ -18,7 +18,7 @@ class LeaveType(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Relationship
-    leave_request: Mapped[list["LeaveRequest"]] = relationship(
+    leave_requests: Mapped[list["LeaveRequest"]] = relationship(
         back_populates="leave_type", lazy="select"
     )
 

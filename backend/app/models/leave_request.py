@@ -20,7 +20,7 @@ class LeaveRequest(Base):
     )
     employee_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 
-        ForeignKey("users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         index=True
     )
 
@@ -30,8 +30,8 @@ class LeaveRequest(Base):
         index=True
     )
 
-    start_date: Mapped[date] = mapped_column(date)
-    end_date: Mapped[date] = mapped_column(date)
+    start_date: Mapped[date] = mapped_column(Date)
+    end_date: Mapped[date] = mapped_column(Date)
     total_days: Mapped[int] = mapped_column(Integer)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     document_path: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -43,7 +43,7 @@ class LeaveRequest(Base):
     # Review
     reviewed_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 
-        ForeignKey("users.user_id", ondelete="SET NULL"), 
+        ForeignKey("users.id", ondelete="SET NULL"), 
         nullable=True
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(

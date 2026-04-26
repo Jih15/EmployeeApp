@@ -16,7 +16,7 @@ class Attendance(Base):
     __tablename__ = "attendances"
     __table_args__ = (
         # 1 karyawan hanya 1 record per hari
-        UniqueConstraint("employee_id", "attendance_date", name="uq_attendance_per_day")
+        UniqueConstraint("employee_id", "attendance_date", name="uq_attendance_per_day"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -24,17 +24,15 @@ class Attendance(Base):
     )
     employee_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         index=True
     )
     office_location_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 
-        ForeignKey("users.user_id", ondelete="SET NULL"),
+        ForeignKey("office_locations.id", ondelete="SET NULL"),
         nullable=True
     )
-    attendance_date: Mapped[date] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    attendance_date: Mapped[date] = mapped_column(Date, nullable=False)
 
     # Clock-In
     clock_in_at: Mapped[datetime | None] = mapped_column(
@@ -49,8 +47,8 @@ class Attendance(Base):
     clock_out_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    clock_out_lat: Mapped[Float | None] = mapped_column(Float, nullable=True)
-    clock_out_lng: Mapped[Float | None] = mapped_column(Float, nullable=True)
+    clock_out_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    clock_out_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
     clock_out_photo_path: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     status: Mapped[AttendanceStatus] = mapped_column(
