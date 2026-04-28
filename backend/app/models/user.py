@@ -46,7 +46,8 @@ class User(Base):
     face_data: Mapped["EmployeeFaceData | None"] = relationship(
         back_populates="user",
         uselist=False,
-        lazy="select"
+        lazy="select",
+        foreign_keys="EmployeeFaceData.employee_id"  # ← tambah ini
     )
 
     attendances: Mapped[list["Attendance"]] = relationship(

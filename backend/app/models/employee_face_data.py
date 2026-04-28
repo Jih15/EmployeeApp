@@ -22,7 +22,9 @@ class EmployeeFaceData(Base):
         DateTime(timezone=True), nullable=True
     )
     registered_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True # ID HR
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),  
+        nullable=True
     )
     last_updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -37,3 +39,4 @@ class EmployeeFaceData(Base):
         back_populates="registered_face_data",
         foreign_keys=[registered_by]
     )
+
