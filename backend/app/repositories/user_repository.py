@@ -42,7 +42,7 @@ class UserRepository:
    async def get_with_profile(self, user_id: uuid.UUID) -> User | None: 
       """Endpoint profile karyawan - Join employee_profile"""
       result = await self.db.execute(
-         select(User).options(selectinload(User.face_data)).where(User.id == user_id)
+         select(User).options(selectinload(User.profile)).where(User.id == user_id)
       )
       return result.scalar_one_or_none()
     
