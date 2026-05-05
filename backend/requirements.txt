@@ -1,21 +1,35 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-alembic
-asyncpg          
-psycopg2-binary
-pydantic
-pydantic-settings
-python-jose[cryptography]   
-passlib[bcrypt]             
-python-multipart            
-Pillow
-face-recognition            
-# deepface                   
-geopy                       
-slowapi                     
-redis                       
-celery                      
-httpx
-pytest
-pytest-asyncio
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# Database
+sqlalchemy==2.0.35
+asyncpg==0.29.0
+alembic==1.13.3
+
+# Auth & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Redis (token blacklist)
+redis==5.0.8
+
+# Settings
+pydantic-settings==2.5.2
+pydantic[email]==2.9.2
+
+# Face Recognition
+# Catatan: dlib butuh cmake & build-tools. Install dulu:
+#   macOS  : brew install cmake
+#   Ubuntu : apt-get install -y cmake build-essential libopenblas-dev liblapack-dev
+face-recognition==1.3.0
+numpy==1.26.4
+
+# File handling
+python-multipart==0.0.12  # wajib untuk UploadFile di FastAPI
+aiofiles==24.1.0
+
+# Dev only
+# pytest==8.3.3
+# pytest-asyncio==0.24.0
+# httpx==0.27.2  # untuk TestClient async
