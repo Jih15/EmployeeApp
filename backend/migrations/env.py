@@ -1,3 +1,16 @@
+"""
+Alembic env.py — async-compatible dengan asyncpg.
+
+Cara pakai:
+    # Generate migration dari model (pastikan semua model diimport di app/models/__init__.py)
+    alembic revision --autogenerate -m "nama_migration"
+
+    # Apply migration
+    alembic upgrade head
+
+    # Rollback 1 step
+    alembic downgrade -1
+"""
 import asyncio
 from logging.config import fileConfig
 
@@ -7,43 +20,30 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
+# Import settings & Base — harus sebelum import models
 from app.config.settings import settings
 from app.config.database import Base
 
-import app.models
+# Import semua model agar metadata lengkap saat autogenerate
+import app.models  # noqa: F401
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+# Override URL dari settings — jangan hardcode di alembic.ini
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
+# ── Offline Mode ───────────────────────────────────────────────────────────────
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
+    """
+    Offline mode: generate SQL script tanpa koneksi DB.
+    Berguna untuk review SQL sebelum apply, atau deploy ke production.
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -51,45 +51,39 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        # Render enum as native PostgreSQL ENUM, bukan VARCHAR
+        render_as_batch=False,
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
 
+# ── Online Mode ────────────────────────────────────────────────────────────────
+
 def do_run_migrations(connection: Connection) -> None:
     context.configure(
-        connection=connection, 
+        connection=connection,
         target_metadata=target_metadata,
+        # compare_type=True agar alembic deteksi perubahan kolom type
         compare_type=True,
-        compare_server_default=True
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_async_migrations() -> None:
-    """In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    connectable = create_async_engine(
-        settings.DATABASE_URL,
-        poolclass=pool.NullPool,
+    """Online mode dengan async engine — wajib karena kita pakai asyncpg."""
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,  # NullPool untuk migration — tidak butuh connection pool
     )
-
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
-
     await connectable.dispose()
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-
     asyncio.run(run_async_migrations())
 
 
