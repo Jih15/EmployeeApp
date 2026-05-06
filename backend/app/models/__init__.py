@@ -1,4 +1,3 @@
-# Import semua model agar SQLAlchemy bisa resolve string relationships
 from app.models.user import User, UserRole
 from app.models.office_location import OfficeLocation
 from app.models.employee_profile import EmployeeProfile
