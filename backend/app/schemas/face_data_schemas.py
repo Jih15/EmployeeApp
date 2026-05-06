@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, computed_field
 
 
-class FaceDateResponse(BaseModel):
+class FaceDataResponse(BaseModel):
     """
     Response untuk face data.
     encoding (raw JSON 120-float) dan tidak ekspos ke client - hanya has_encoding (bool)
