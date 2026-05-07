@@ -14,6 +14,10 @@ from app.routers import (
     employee_routers,
     office_location_routers,
     face_data_routers,
+    attendances_routers,
+    leave_type_routers,
+    leave_request_routers,
+    payroll_routers
 )
 
 logger = logging.getLogger(__name__)
@@ -127,8 +131,12 @@ app.include_router(auth_routers.router, prefix=PREFIX)
 app.include_router(employee_routers.router, prefix=PREFIX)
 app.include_router(office_location_routers.router, prefix=PREFIX)
 app.include_router(face_data_routers.router, prefix=PREFIX)
-
-
+app.include_router(attendances_routers.router, prefix=PREFIX)
+app.include_router(leave_type_routers.router, prefix=PREFIX)
+app.include_router(leave_request_routers.router, prefix=PREFIX)
+app.include_router(payroll_routers.router, prefix=PREFIX)
+ 
+ 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
 @app.get("/health", tags=["Health"], include_in_schema=not settings.is_production)
