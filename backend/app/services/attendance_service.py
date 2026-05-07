@@ -20,10 +20,11 @@ from app.core.exceptions import (
     NotFoundException,
     OutOfRadiusException,
 )
+
+from zoneinfo import ZoneInfo
 from app.core.face_utils import compare_face
 from app.core.file_handler import save_upload_file
 from app.models.attendance import Attendance, AttendanceStatus
-from app.models.employee_profile import EmployeeProfile
 from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.face_data_repository import FaceDataRepository
@@ -32,6 +33,10 @@ from app.repositories.office_location_repository import OfficeLocationRepository
 # ── Config (pindah ke DB settings nanti) ──────────────────────────────────────
 WORK_START_HOUR = 8       # 08:00 WIB → jam masuk
 LATE_THRESHOLD_MINUTE = 15  # toleransi 15 menit → > 08:15 = LATE
+WIB = ZoneInfo("Asia/Jakarta")  # zona waktu WIB (UTC+7)
+
+now = datetime.now(timezone.utc)  # waktu server (UTC)
+now_wib = datetime.now(WIB)
 
 
 def _haversine_meters(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -60,7 +65,7 @@ class AttendanceService:
         longitude: float,
         photo: UploadFile,
     ) -> Attendance:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(WIB)
 
         # 1. Cek sudah clock-in hari ini
         existing = await self.repo.get_today(employee_id)
@@ -111,7 +116,7 @@ class AttendanceService:
         # Untuk produksi: gunakan pytz / zoneinfo per kantor
         wib_hour = (now.hour + 7) % 24
         wib_minute = now.minute
-        total_minutes = wib_hour * 60 + wib_minute
+        total_minutes = now_wib.hour * 60 + now_wib.minute
         work_start_minutes = WORK_START_HOUR * 60 + LATE_THRESHOLD_MINUTE
 
         status = (
@@ -136,7 +141,7 @@ class AttendanceService:
         return await self.repo.create({
             "employee_id": employee_id,
             "office_location_id": location.id,
-            "attendance_date": now.date(),
+            "attendance_date": now_wib.date(),
             "clock_in_at": now,
             "clock_in_lat": latitude,
             "clock_in_lng": longitude,
@@ -154,7 +159,7 @@ class AttendanceService:
         longitude: float,
         photo: UploadFile,
     ) -> Attendance:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(WIB)
 
         # 1. Harus sudah clock-in dulu
         attendance = await self.repo.get_today(employee_id)
