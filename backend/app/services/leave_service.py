@@ -16,7 +16,7 @@ from app.models.leave_request import LeaveRequest, LeaveStatus
 from app.models.leave_type import LeaveType
 from app.models.user import User, UserRole
 from app.repositories.leave_request_repository import LeaveRequestRepository
-from backend.app.repositories.leave_type_repository import LeaveTypeRepository
+from app.repositories.leave_type_repository import LeaveTypeRepository
 
 # ── Leave Type ─────────────────────────────────────────────────────────────────
 

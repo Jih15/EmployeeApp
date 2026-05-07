@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, get_hr_or_above
 from app.models.attendance import AttendanceStatus
-from backend.app.schemas.attendance_schema import (
+from app.schemas.attendance_schema import (
     AttendanceListResponse,
     AttendanceResponse,
     TodayAttendanceResponse,
 )
-from backend.app.services.attendance_service import AttendanceService
+from app.services.attendance_service import AttendanceService
 
 router = APIRouter(tags=["Attendance"])
 

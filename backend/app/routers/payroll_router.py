@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, get_hr_or_above, get_super_admin
 from app.models.payroll_record import PayrollRecordStatus
-from backend.app.schemas.payroll_schema import (
+from app.schemas.payroll_schema import (
     PayrollComponentRequest,
     PayrollComponentResponse,
     PayrollPeriodCreateRequest,
@@ -16,7 +16,7 @@ from backend.app.schemas.payroll_schema import (
     PayrollRecordResponse,
     PayrollSummaryResponse,
 )
-from backend.app.services.payroll_service import PayrollService
+from app.services.payroll_service import PayrollService
 
 router = APIRouter(prefix="/payroll", tags=["Payroll"])
 

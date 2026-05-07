@@ -8,12 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, get_hr_or_above
 from app.models.leave_request import LeaveStatus
-from backend.app.schemas.leave_schema import (
+from app.schemas.leave_schema import (
     LeaveRequestListResponse,
     LeaveRequestResponse,
     LeaveReviewRequest,
 )
-from backend.app.services.leave_service import LeaveRequestService
+from app.services.leave_service import LeaveRequestService
 
 router = APIRouter(tags=["Leave Requests"])
 

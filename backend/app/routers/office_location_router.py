@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_hr_or_above, get_super_admin
-from backend.app.schemas.office_location_schema import (
+from app.schemas.office_location_schema import (
     OfficeLocationCreateRequest,
     OfficeLocationResponse,
     OfficeLocationUpdateRequest,
 )
-from backend.app.services.office_location_service import OfficeLocationService
+from app.services.office_location_service import OfficeLocationService
 
 router = APIRouter(prefix="/office-locations", tags=["Office Locations"])
 

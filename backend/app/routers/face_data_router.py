@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, get_hr_or_above
-from backend.app.schemas.face_data_schema import FaceDataResponse
-from backend.app.services.face_data_service import FaceDataService
+from app.schemas.face_data_schema import FaceDataResponse
+from app.services.face_data_service import FaceDataService
 
 # Tag sama "Face Data", tapi prefix di-split:
 # - /employees/{id}/face → HR action

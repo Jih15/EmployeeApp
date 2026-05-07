@@ -11,7 +11,7 @@ from app.core.dependencies import (
 )
 
 from app.models.user import UserRole
-from backend.app.schemas.employee_schema import (
+from app.schemas.employee_schema import (
     ProfileCreateRequest,
     ProfileUpdateRequest,
     SelfProfileUpdateRequest,
@@ -20,7 +20,7 @@ from backend.app.schemas.employee_schema import (
     ProfileResponse
 )
 
-from backend.app.services.employee_service import EmployeeService
+from app.services.employee_service import EmployeeService
 
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
