@@ -11,12 +11,13 @@ from app.core.exceptions import (
     ForbiddenException,
     NotFoundException,
 )
-from app.core.file_handler import save_upload_file
+from app.core.file_handler import delete_file, save_upload_file
 from app.models.leave_request import LeaveRequest, LeaveStatus
 from app.models.leave_type import LeaveType
 from app.models.user import User, UserRole
 from app.repositories.leave_request_repository import LeaveRequestRepository
 from app.repositories.leave_type_repository import LeaveTypeRepository
+
 
 # ── Leave Type ─────────────────────────────────────────────────────────────────
 
@@ -69,11 +70,8 @@ class LeaveRequestService:
 
         start_date = data["start_date"]
         end_date = data["end_date"]
-
-        # Hitung total hari kerja (sederhana, tidak hitung weekend/holiday untuk MVP)
         total_days = (end_date - start_date).days + 1
 
-        # Cek kuota tahunan
         year = start_date.year
         used_days = await self.repo.count_approved_days(
             employee_id, leave_type.id, year
@@ -88,13 +86,11 @@ class LeaveRequestService:
                 ),
             )
 
-        # Cek overlap
         if await self.repo.has_overlapping(employee_id, start_date, end_date):
             raise ConflictException(
                 "Terdapat pengajuan cuti yang overlap dengan tanggal yang dipilih."
             )
 
-        # Upload dokumen jika required
         document_path = None
         if leave_type.requires_document:
             if not document:
@@ -104,21 +100,25 @@ class LeaveRequestService:
                 )
             document_path, _ = await save_upload_file(document, subdirectory="leave_docs")
 
-        return await self.repo.create({
-            "employee_id": employee_id,
-            "leave_type_id": leave_type.id,
-            "start_date": start_date,
-            "end_date": end_date,
-            "total_days": total_days,
-            "reason": data.get("reason"),
-            "document_path": document_path,
-            "status": LeaveStatus.PENDING,
-        })
+        try:
+            return await self.repo.create({
+                "employee_id": employee_id,
+                "leave_type_id": leave_type.id,
+                "start_date": start_date,
+                "end_date": end_date,
+                "total_days": total_days,
+                "reason": data.get("reason"),
+                "document_path": document_path,
+                "status": LeaveStatus.PENDING,
+            })
+        except Exception:
+            if document_path:
+                delete_file(document_path)
+            raise
 
     async def cancel(self, leave_id: uuid.UUID, current_user: User) -> LeaveRequest:
         leave = await self._get_or_404(leave_id)
 
-        # Employee hanya bisa cancel miliknya sendiri
         if current_user.role == UserRole.EMPLOYEE and leave.employee_id != current_user.id:
             raise ForbiddenException()
 

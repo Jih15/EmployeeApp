@@ -5,8 +5,8 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.payroll_component import PayrollComponent, ComponentType
-from app.models.payroll_period import PayrollPeriod, PayrollPeriodStatus
+from app.models.payroll_component import PayrollComponent
+from app.models.payroll_period import PayrollPeriod
 from app.models.payroll_record import PayrollRecord, PayrollRecordStatus
 
 
@@ -90,28 +90,26 @@ class PayrollRecordRepository:
         employee_id: Optional[uuid.UUID] = None,
         status: Optional[PayrollRecordStatus] = None,
     ) -> tuple[list[PayrollRecord], int]:
-        query = select(PayrollRecord).options(selectinload(PayrollRecord.components))
+        base_query = select(PayrollRecord)
 
         if period_id:
-            query = query.where(PayrollRecord.period_id == period_id)
+            base_query = base_query.where(PayrollRecord.period_id == period_id)
         if employee_id:
-            query = query.where(PayrollRecord.employee_id == employee_id)
+            base_query = base_query.where(PayrollRecord.employee_id == employee_id)
         if status:
-            query = query.where(PayrollRecord.status == status)
+            base_query = base_query.where(PayrollRecord.status == status)
 
         count_result = await self.db.execute(
-            select(func.count()).select_from(
-                select(PayrollRecord).where(
-                    *([PayrollRecord.period_id == period_id] if period_id else []),
-                    *([PayrollRecord.employee_id == employee_id] if employee_id else []),
-                    *([PayrollRecord.status == status] if status else []),
-                ).subquery()
-            )
+            select(func.count()).select_from(base_query.subquery())
         )
         total = count_result.scalar_one()
 
         result = await self.db.execute(
-            query.order_by(PayrollRecord.created_at.desc()).offset(skip).limit(limit)
+            base_query
+            .options(selectinload(PayrollRecord.components))
+            .order_by(PayrollRecord.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         return list(result.scalars().all()), total
 
@@ -121,22 +119,22 @@ class PayrollRecordRepository:
         skip: int = 0,
         limit: int = 20,
     ) -> tuple[list[PayrollRecord], int]:
-        query = (
+        base_query = (
             select(PayrollRecord)
-            .options(selectinload(PayrollRecord.components))
             .where(PayrollRecord.employee_id == employee_id)
         )
+
         count_result = await self.db.execute(
-            select(func.count()).select_from(
-                select(PayrollRecord).where(
-                    PayrollRecord.employee_id == employee_id
-                ).subquery()
-            )
+            select(func.count()).select_from(base_query.subquery())
         )
         total = count_result.scalar_one()
 
         result = await self.db.execute(
-            query.order_by(PayrollRecord.created_at.desc()).offset(skip).limit(limit)
+            base_query
+            .options(selectinload(PayrollRecord.components))
+            .order_by(PayrollRecord.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         return list(result.scalars().all()), total
 

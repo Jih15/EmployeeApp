@@ -1,4 +1,4 @@
-import uuid 
+import uuid
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
@@ -26,7 +26,6 @@ from app.services.employee_service import EmployeeService
 router = APIRouter(prefix="/employees", tags=["Employees"])
 
 
-# List Karyawan
 @router.get(
     "",
     response_model=EmployeeListResponse,
@@ -41,10 +40,9 @@ async def list_employee(
     _=Depends(get_hr_or_above),
 ):
     service = EmployeeService(db)
-    return await service.get_all(skip,limit,role,is_active)
+    return await service.get_all(skip, limit, role, is_active)
 
 
-# Self profile
 @router.get(
     "/me/profile",
     response_model=EmployeeResponse,
@@ -52,10 +50,11 @@ async def list_employee(
 )
 async def get_own_profile(
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user)
 ):
     service = EmployeeService(db)
     return await service.get_own_profile(current_user.id)
+
 
 @router.put(
     "/me/profile",
@@ -65,7 +64,7 @@ async def get_own_profile(
 async def update_own_profile(
     body: SelfProfileUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     service = EmployeeService(db)
     return await service.update_own_profile(
@@ -74,7 +73,6 @@ async def update_own_profile(
     )
 
 
-# Detail karyawan
 @router.get(
     "/{employee_id}",
     response_model=EmployeeResponse,
@@ -88,7 +86,7 @@ async def get_employee(
     service = EmployeeService(db)
     return await service.get_by_id(employee_id)
 
-# Buat profile
+
 @router.post(
     "/{employee_id}/profile",
     response_model=ProfileResponse,
@@ -107,7 +105,7 @@ async def create_profile(
         body.model_dump(exclude_none=True)
     )
 
-# Update Profile
+
 @router.put(
     "/{employee_id}/profile",
     response_model=ProfileResponse,
@@ -122,10 +120,10 @@ async def update_profile(
     service = EmployeeService(db)
     return await service.update_profile(
         employee_id,
-        body.model_dump(exclude_none=True) 
+        body.model_dump(exclude_none=True)
     )
 
-# Deactivate / Activate
+
 @router.patch(
     "/{employee_id}/deactivate",
     response_model=EmployeeResponse,
@@ -134,7 +132,7 @@ async def update_profile(
 async def deactivate_employee(
     employee_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_super_admin)
+    current_user=Depends(get_super_admin)
 ):
     service = EmployeeService(db)
     return await service.set_active(employee_id, False, current_user)
@@ -143,12 +141,12 @@ async def deactivate_employee(
 @router.patch(
     "/{employee_id}/activate",
     response_model=EmployeeResponse,
-    summary="[Super Admin] Nonaktifkan akun karyawan",
+    summary="[Super Admin] Aktifkan kembali akun karyawan",
 )
 async def activate_employee(
     employee_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_super_admin)
+    current_user=Depends(get_super_admin)
 ):
     service = EmployeeService(db)
     return await service.set_active(employee_id, True, current_user)

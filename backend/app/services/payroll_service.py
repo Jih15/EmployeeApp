@@ -1,22 +1,6 @@
-"""
-PayrollService — alur kerja payroll:
-
-1. HR buat PayrollPeriod (bulan/tahun) → status OPEN
-2. HR trigger "generate" → status PROCESSING
-   - Looping semua karyawan aktif
-   - Rekap attendance dalam periode tsb (present, late, leave, alpha)
-   - Snapshot base_salary dari profile saat itu
-   - Hitung gross_salary = base_salary (bisa dikembangkan dengan rumus pro-rata)
-3. HR tambah/edit komponen (tunjangan/potongan) per record secara manual
-4. HR finalize → status FINALIZED, record berubah ke APPROVED
-5. HR mark paid → record berubah ke PAID
-
-Kalkulasi gaji sengaja sederhana untuk MVP.
-Formula pro-rata (alpha deduction, overtime, dll) bisa ditambah di step 2.
-"""
 import calendar
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +12,7 @@ from app.core.exceptions import (
     NotFoundException,
 )
 from app.models.attendance import AttendanceStatus
+from app.models.payroll_component import ComponentType
 from app.models.payroll_period import PayrollPeriod, PayrollPeriodStatus
 from app.models.payroll_record import PayrollRecord, PayrollRecordStatus
 from app.models.user import User
@@ -38,7 +23,6 @@ from app.repositories.payroll_repository import (
     PayrollPeriodRepository,
     PayrollRecordRepository,
 )
-from app.repositories.user_repository import UserRepository
 
 
 class PayrollService:
@@ -48,7 +32,6 @@ class PayrollService:
         self.component_repo = PayrollComponentRepository(db)
         self.attendance_repo = AttendanceRepository(db)
         self.employee_repo = EmployeeRepository(db)
-        self.user_repo = UserRepository(db)
 
     # ── Period ─────────────────────────────────────────────────────────────────
 
@@ -62,14 +45,10 @@ class PayrollService:
         return period
 
     async def create_period(self, month: int, year: int) -> PayrollPeriod:
-        # Cek duplikat
         existing = await self.period_repo.get_by_month_year(month, year)
         if existing:
-            raise ConflictException(
-                f"Periode payroll {month}/{year} sudah ada."
-            )
+            raise ConflictException(f"Periode payroll {month}/{year} sudah ada.")
 
-        # Hitung start_date dan end_date otomatis
         _, last_day = calendar.monthrange(year, month)
         start_date = date(year, month, 1)
         end_date = date(year, month, last_day)
@@ -85,11 +64,6 @@ class PayrollService:
     async def generate_records(
         self, period_id: uuid.UUID, actor: User
     ) -> list[PayrollRecord]:
-        """
-        Generate PayrollRecord untuk semua karyawan aktif dalam periode.
-        Hanya bisa dipanggil saat periode OPEN.
-        Idempotent: karyawan yang sudah punya record di-skip.
-        """
         period = await self._get_period_or_404(period_id)
 
         if period.status != PayrollPeriodStatus.OPEN:
@@ -98,17 +72,14 @@ class PayrollService:
                 message="Generate hanya bisa dilakukan saat periode berstatus OPEN.",
             )
 
-        # Ubah status ke PROCESSING
         await self.period_repo.update(period, {"status": PayrollPeriodStatus.PROCESSING})
 
-        # Ambil semua karyawan aktif dengan profile
         users, _ = await self.employee_repo.get_all_with_profile(
             skip=0, limit=9999, is_active=True
         )
 
         generated = []
         for user in users:
-            # Skip jika sudah ada record
             existing = await self.record_repo.get_by_employee_period(user.id, period_id)
             if existing:
                 generated.append(existing)
@@ -116,14 +87,12 @@ class PayrollService:
 
             profile = user.profile
             if not profile:
-                continue  # Skip user tanpa profile
+                continue
 
-            # Rekap attendance periode ini
             attendances = await self.attendance_repo.get_by_period(
                 user.id, period.start_date, period.end_date
             )
 
-            # Hitung total hari kerja periode (hari kalender - weekend, sederhana untuk MVP)
             working_days = self._count_working_days(period.start_date, period.end_date)
 
             present_days = sum(
@@ -131,13 +100,10 @@ class PayrollService:
                 if a.status in (AttendanceStatus.PRESENT, AttendanceStatus.LATE)
             )
             leave_days = sum(1 for a in attendances if a.status == AttendanceStatus.LEAVE)
-            alpha_days = working_days - present_days - leave_days
-            alpha_days = max(alpha_days, 0)
+            alpha_days = max(working_days - present_days - leave_days, 0)
 
             base_salary = float(profile.base_salary or 0)
 
-            # Gross = base_salary (MVP — bisa dikembangkan dengan pro-rata alpha)
-            # Contoh deduction alpha: base_salary / working_days * alpha_days
             alpha_deduction = (
                 (base_salary / working_days * alpha_days) if working_days > 0 else 0
             )
@@ -153,10 +119,21 @@ class PayrollService:
                 "alpha_days": alpha_days,
                 "gross_salary": round(gross_salary, 2),
                 "total_allowances": 0,
-                "total_deductions": round(alpha_deduction, 2),
+                "total_deductions": 0,
                 "net_salary": round(gross_salary, 2),
                 "status": PayrollRecordStatus.DRAFT,
             })
+
+            # Buat komponen potongan absensi agar tetap tercatat setelah recalculate
+            if alpha_deduction > 0:
+                await self.component_repo.create({
+                    "payroll_record_id": record.id,
+                    "name": "Potongan Absensi",
+                    "type": ComponentType.DEDUCTION,
+                    "amount": round(alpha_deduction, 2),
+                })
+                record = await self._recalculate(record)
+
             generated.append(record)
 
         return generated
@@ -164,11 +141,6 @@ class PayrollService:
     async def finalize_period(
         self, period_id: uuid.UUID, actor: User
     ) -> PayrollPeriod:
-        """
-        Finalize periode:
-        - Semua record DRAFT → APPROVED
-        - Period status → FINALIZED
-        """
         period = await self._get_period_or_404(period_id)
 
         if period.status != PayrollPeriodStatus.PROCESSING:
@@ -177,8 +149,7 @@ class PayrollService:
                 message="Finalisasi hanya bisa dilakukan saat periode berstatus PROCESSING.",
             )
 
-        # Approve semua record DRAFT dalam periode ini
-        records, _ = await self.record_repo.get_all(period_id=period_id)
+        records, _ = await self.record_repo.get_all(period_id=period_id, limit=9999)
         for record in records:
             if record.status == PayrollRecordStatus.DRAFT:
                 await self.record_repo.update(
@@ -221,7 +192,6 @@ class PayrollService:
     async def get_my_slip(
         self, employee_id: uuid.UUID, record_id: uuid.UUID
     ) -> dict:
-        """Slip gaji detail — employee hanya bisa lihat punyanya sendiri."""
         record = await self.record_repo.get_by_id(record_id)
         if not record:
             raise NotFoundException("Payroll record")
@@ -275,7 +245,6 @@ class PayrollService:
             **data,
         })
 
-        # Recalculate totals
         return await self._recalculate(record)
 
     async def delete_component(
@@ -301,11 +270,6 @@ class PayrollService:
     # ── Private Helpers ────────────────────────────────────────────────────────
 
     async def _recalculate(self, record: PayrollRecord) -> PayrollRecord:
-        """
-        Hitung ulang total_allowances, total_deductions, net_salary
-        setelah ada perubahan komponen.
-        """
-        # Reload dengan components terbaru
         record = await self.record_repo.get_by_id(record.id)
 
         total_allowances = sum(
@@ -323,13 +287,11 @@ class PayrollService:
         })
 
     def _count_working_days(self, start: date, end: date) -> int:
-        """Hitung hari kerja (Senin-Jumat) dalam rentang tanggal."""
         count = 0
         current = start
         while current <= end:
-            if current.weekday() < 5:  # 0=Mon, 4=Fri
+            if current.weekday() < 5:
                 count += 1
-            from datetime import timedelta
             current += timedelta(days=1)
         return count
 

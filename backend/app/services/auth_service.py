@@ -1,147 +1,188 @@
+import uuid
 from datetime import datetime, timezone
+from typing import Optional
+
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import (
-    verify_password,
-    hash_password,
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-    blacklist_token,
-)
 from app.core.exceptions import (
-    UnauthorizedException,
+    BadRequestException,
     ConflictException,
-    TokenInvalidException,
+    ForbiddenException,
     NotFoundException,
 )
+from app.core.file_handler import delete_file, save_upload_file
+from app.models.leave_request import LeaveRequest, LeaveStatus
+from app.models.leave_type import LeaveType
 from app.models.user import User, UserRole
-from app.repositories.user_repository import UserRepository
+from app.repositories.leave_request_repository import LeaveRequestRepository
+from app.repositories.leave_type_repository import LeaveTypeRepository
 
 
-class AuthService:
+# ── Leave Type ─────────────────────────────────────────────────────────────────
+
+class LeaveTypeService:
     def __init__(self, db: AsyncSession):
-        self.repo = UserRepository(db)
+        self.repo = LeaveTypeRepository(db)
 
-    # ── Login ──────────────────────────────────────────────────────────────────
+    async def get_all(self, active_only: bool = True) -> list[LeaveType]:
+        return await self.repo.get_all(active_only)
 
-    async def login(self, email: str, password: str) -> dict:
-        user = await self.repo.get_by_email(email)
+    async def get_by_id(self, leave_type_id: uuid.UUID) -> LeaveType:
+        lt = await self.repo.get_by_id(leave_type_id)
+        if not lt:
+            raise NotFoundException("Jenis cuti")
+        return lt
 
-        # Sengaja satu pesan untuk dua kondisi — cegah user enumeration
-        if not user or not verify_password(password, user.hashed_password):
-            raise UnauthorizedException(
-                message="Email atau password salah.",
-                error_code="INVALID_CREDENTIALS",
-            )
+    async def create(self, data: dict) -> LeaveType:
+        if await self.repo.name_exists(data["name"]):
+            raise ConflictException(f"Jenis cuti '{data['name']}' sudah ada.")
+        return await self.repo.create(data)
 
-        if not user.is_active:
-            raise UnauthorizedException(message="Akun Anda telah dinonaktifkan.")
+    async def update(self, leave_type_id: uuid.UUID, data: dict) -> LeaveType:
+        lt = await self.repo.get_by_id(leave_type_id)
+        if not lt:
+            raise NotFoundException("Jenis cuti")
 
-        return {
-            "access_token": create_access_token(str(user.id), user.role.value),
-            "refresh_token": create_refresh_token(str(user.id)),
-            "token_type": "bearer",
-            "user": user,
-        }
+        new_name = data.get("name")
+        if new_name and await self.repo.name_exists(new_name, exclude_id=leave_type_id):
+            raise ConflictException(f"Jenis cuti '{new_name}' sudah ada.")
 
-    # ── Logout ─────────────────────────────────────────────────────────────────
+        return await self.repo.update(lt, data)
 
-    async def logout(self, access_token: str) -> None:
-        """
-        Blacklist JTI access token di Redis sampai token alami expiry.
-        Flutter juga wajib hapus refresh token dari secure storage.
-        """
-        payload = await decode_token(access_token)
-        jti = payload.get("jti")
-        exp = payload.get("exp")
 
-        if not jti or not exp:
-            raise TokenInvalidException()
+# ── Leave Request ──────────────────────────────────────────────────────────────
 
-        now = int(datetime.now(timezone.utc).timestamp())
-        ttl = exp - now
+class LeaveRequestService:
+    def __init__(self, db: AsyncSession):
+        self.repo = LeaveRequestRepository(db)
+        self.type_repo = LeaveTypeRepository(db)
 
-        if ttl > 0:
-            await blacklist_token(jti, ttl)
+    async def create(
+        self,
+        employee_id: uuid.UUID,
+        data: dict,
+        document: Optional[UploadFile] = None,
+    ) -> LeaveRequest:
+        leave_type = await self.type_repo.get_by_id(data["leave_type_id"])
+        if not leave_type or not leave_type.is_active:
+            raise NotFoundException("Jenis cuti")
 
-    # ── Refresh ────────────────────────────────────────────────────────────────
+        start_date = data["start_date"]
+        end_date = data["end_date"]
+        total_days = (end_date - start_date).days + 1
 
-    async def refresh(self, refresh_token: str) -> dict:
-        """
-        Refresh token rotation:
-        1. Validasi refresh token
-        2. Blacklist refresh token lama (one-time use)
-        3. Issue access token baru + refresh token baru
-        """
-        payload = await decode_token(refresh_token)
-
-        if payload.get("type") != "refresh":
-            raise TokenInvalidException()
-
-        user_id = payload.get("sub")
-        user = await self.repo.get_by_id(user_id)
-
-        if not user:
-            raise NotFoundException("User")
-        if not user.is_active:
-            raise UnauthorizedException("Akun Anda telah dinonaktifkan.")
-
-        # Invalidasi refresh token lama — cegah replay attack
-        await self._blacklist_payload(payload)
-
-        return {
-            "access_token": create_access_token(str(user.id), user.role.value),
-            "refresh_token": create_refresh_token(str(user.id)),
-            "token_type": "bearer",
-        }
-
-    # ── Register ───────────────────────────────────────────────────────────────
-
-    async def register(self, email: str, password: str, role: UserRole) -> User:
-        """
-        Buat akun baru — hanya dipanggil oleh Super Admin.
-        Profile karyawan (nama, dept, dll) diisi terpisah via endpoint /employees.
-        """
-        if await self.repo.email_exists(email):
-            raise ConflictException(f"Email {email} sudah terdaftar.")
-
-        return await self.repo.create(
-            email=email.lower().strip(),
-            hashed_password=hash_password(password),
-            role=role,
+        year = start_date.year
+        used_days = await self.repo.count_approved_days(
+            employee_id, leave_type.id, year
         )
-
-    # ── Change Password ────────────────────────────────────────────────────────
-
-    async def change_password(
-        self, user: User, old_password: str, new_password: str
-    ) -> None:
-        if not verify_password(old_password, user.hashed_password):
-            raise UnauthorizedException(
-                message="Password lama tidak sesuai.",
-                error_code="INVALID_PASSWORD",
-            )
-
-        if old_password == new_password:
-            from app.core.exceptions import BadRequestException
+        if used_days + total_days > leave_type.max_days_per_year:
+            remaining = leave_type.max_days_per_year - used_days
             raise BadRequestException(
-                error_code="SAME_PASSWORD",
-                message="Password baru tidak boleh sama dengan password lama.",
+                error_code="QUOTA_EXCEEDED",
+                message=(
+                    f"Kuota cuti '{leave_type.name}' tidak mencukupi. "
+                    f"Sisa: {remaining} hari, diminta: {total_days} hari."
+                ),
             )
 
-        await self.repo.update(user, {
-            "hashed_password": hash_password(new_password)
+        if await self.repo.has_overlapping(employee_id, start_date, end_date):
+            raise ConflictException(
+                "Terdapat pengajuan cuti yang overlap dengan tanggal yang dipilih."
+            )
+
+        document_path = None
+        if leave_type.requires_document:
+            if not document:
+                raise BadRequestException(
+                    error_code="DOCUMENT_REQUIRED",
+                    message=f"Jenis cuti '{leave_type.name}' memerlukan dokumen pendukung.",
+                )
+            document_path, _ = await save_upload_file(document, subdirectory="leave_docs")
+
+        try:
+            return await self.repo.create({
+                "employee_id": employee_id,
+                "leave_type_id": leave_type.id,
+                "start_date": start_date,
+                "end_date": end_date,
+                "total_days": total_days,
+                "reason": data.get("reason"),
+                "document_path": document_path,
+                "status": LeaveStatus.PENDING,
+            })
+        except Exception:
+            if document_path:
+                delete_file(document_path)
+            raise
+
+    async def cancel(self, leave_id: uuid.UUID, current_user: User) -> LeaveRequest:
+        leave = await self._get_or_404(leave_id)
+
+        if current_user.role == UserRole.EMPLOYEE and leave.employee_id != current_user.id:
+            raise ForbiddenException()
+
+        if leave.status != LeaveStatus.PENDING:
+            raise BadRequestException(
+                error_code="CANNOT_CANCEL",
+                message="Hanya pengajuan berstatus pending yang bisa dibatalkan.",
+            )
+
+        return await self.repo.update(leave, {"status": LeaveStatus.CANCELLED})
+
+    async def review(
+        self,
+        leave_id: uuid.UUID,
+        reviewer: User,
+        status: LeaveStatus,
+        review_notes: Optional[str],
+    ) -> LeaveRequest:
+        leave = await self._get_or_404(leave_id)
+
+        if leave.status != LeaveStatus.PENDING:
+            raise BadRequestException(
+                error_code="ALREADY_REVIEWED",
+                message="Pengajuan sudah diproses sebelumnya.",
+            )
+
+        return await self.repo.update(leave, {
+            "status": status,
+            "reviewed_by": reviewer.id,
+            "reviewed_at": datetime.now(timezone.utc),
+            "review_notes": review_notes,
         })
 
-    # ── Private Helpers ────────────────────────────────────────────────────────
+    async def get_all(
+        self,
+        skip: int,
+        limit: int,
+        employee_id=None,
+        status=None,
+        date_from=None,
+        date_to=None,
+    ) -> dict:
+        records, total = await self.repo.get_all(
+            skip, limit, employee_id, status, date_from, date_to
+        )
+        return {"data": records, "total": total, "skip": skip, "limit": limit}
 
-    async def _blacklist_payload(self, payload: dict) -> None:
-        jti = payload.get("jti")
-        exp = payload.get("exp")
-        if not jti or not exp:
-            return
-        now = int(datetime.now(timezone.utc).timestamp())
-        ttl = exp - now
-        if ttl > 0:
-            await blacklist_token(jti, ttl)
+    async def get_my_requests(
+        self,
+        employee_id: uuid.UUID,
+        skip: int,
+        limit: int,
+        status=None,
+    ) -> dict:
+        records, total = await self.repo.get_all(
+            skip, limit, employee_id=employee_id, status=status
+        )
+        return {"data": records, "total": total, "skip": skip, "limit": limit}
+
+    async def get_by_id(self, leave_id: uuid.UUID) -> LeaveRequest:
+        return await self._get_or_404(leave_id)
+
+    async def _get_or_404(self, leave_id: uuid.UUID) -> LeaveRequest:
+        leave = await self.repo.get_by_id(leave_id)
+        if not leave:
+            raise NotFoundException("Pengajuan cuti")
+        return leave

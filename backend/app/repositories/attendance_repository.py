@@ -1,18 +1,16 @@
 import uuid
 from datetime import date, datetime, timezone
 from typing import Optional
-
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.attendance import Attendance, AttendanceStatus
-from app.models.user import User
+
+WIB = ZoneInfo("Asia/Jakarta")
 
 
-WIB= ZoneInfo("Asia/Jakarta")  # zona waktu WIB (UTC+7)
 class AttendanceRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -84,7 +82,6 @@ class AttendanceRepository:
         date_from: date,
         date_to: date,
     ) -> list[Attendance]:
-        """Dipakai payroll service untuk rekap kehadiran per periode."""
         result = await self.db.execute(
             select(Attendance).where(
                 and_(
