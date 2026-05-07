@@ -1,21 +1,15 @@
-from app.routers import (
-    auth_routers,
-    employee_routers,
-    office_location_routers,
-    face_data_routers,
-    attendances_routers,
-    leave_type_routers,
-    leave_request_routers,
-    payroll_routers,
+from backend.app.routers import (
+    payroll_router,
 )
+from backend.app.routers import attendances_router, auth_router, employee_router, face_data_router, leave_request_router, leave_type_router, office_location_router
 
 __all__ = [
-    "auth_routers",
-    "employee_routers",
-    "office_location_routers",
-    "face_data_routers",
-    "attendances_routers",
-    "leave_type_routers",
-    "leave_request_routers",
-    "payroll_routers",
+    "auth_router",
+    "employee_router",
+    "office_location_router",
+    "face_data_router",
+    "attendances_router",
+    "leave_type_router",
+    "leave_request_router",
+    "payroll_router",
 ]

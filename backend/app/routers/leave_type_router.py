@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, get_hr_or_above, get_super_admin
-from app.schemas.leave_schemas import (
+from backend.app.schemas.leave_schema import (
     LeaveTypeCreateRequest,
     LeaveTypeUpdateRequest,
     LeaveTypeResponse,
 )
-from app.services.leave_services import LeaveTypeService
+from backend.app.services.leave_service import LeaveTypeService
 
 router = APIRouter(prefix="/leave-types", tags=["Leave Types"])
 

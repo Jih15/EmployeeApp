@@ -9,16 +9,10 @@ from fastapi.responses import JSONResponse
 
 from app.config.settings import settings
 from app.core.exceptions import AppException
-from app.routers import (
-    auth_routers,
-    employee_routers,
-    office_location_routers,
-    face_data_routers,
-    attendances_routers,
-    leave_type_routers,
-    leave_request_routers,
-    payroll_routers
+from backend.app.routers import (
+    payroll_router
 )
+from backend.app.routers import attendances_router, auth_router, employee_router, face_data_router, leave_request_router, leave_type_router, office_location_router
 
 logger = logging.getLogger(__name__)
 
@@ -127,14 +121,14 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 PREFIX = "/api/v1"
 
-app.include_router(auth_routers.router, prefix=PREFIX)
-app.include_router(employee_routers.router, prefix=PREFIX)
-app.include_router(office_location_routers.router, prefix=PREFIX)
-app.include_router(face_data_routers.router, prefix=PREFIX)
-app.include_router(attendances_routers.router, prefix=PREFIX)
-app.include_router(leave_type_routers.router, prefix=PREFIX)
-app.include_router(leave_request_routers.router, prefix=PREFIX)
-app.include_router(payroll_routers.router, prefix=PREFIX)
+app.include_router(auth_router.router, prefix=PREFIX)
+app.include_router(employee_router.router, prefix=PREFIX)
+app.include_router(office_location_router.router, prefix=PREFIX)
+app.include_router(face_data_router.router, prefix=PREFIX)
+app.include_router(attendances_router.router, prefix=PREFIX)
+app.include_router(leave_type_router.router, prefix=PREFIX)
+app.include_router(leave_request_router.router, prefix=PREFIX)
+app.include_router(payroll_router.router, prefix=PREFIX)
  
  
 # ── Health ─────────────────────────────────────────────────────────────────────

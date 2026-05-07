@@ -4,11 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.database import get_db
 from app.core.dependencies import get_current_user, get_super_admin
-from app.schemas.auth_schemas import (
+from backend.app.schemas.auth_schema import (
     LoginRequest, TokenResponse, RefreshRequest, AccessTokenResponse,
     RegisterRequest, ChangePasswordRequest, UserResponse
 )
-from app.services.auth_services import AuthService
+from backend.app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 bearer_scheme = HTTPBearer()
