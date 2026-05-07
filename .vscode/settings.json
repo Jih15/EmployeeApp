@@ -1,3 +1,4 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:venv"
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "cmake.sourceDirectory": "/media/zaqaul-f/zaqaul_f/Me/My-Project/IndividualProject/EmployeeApp/frontend/linux"
 }
