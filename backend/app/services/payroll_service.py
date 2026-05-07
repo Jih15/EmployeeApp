@@ -107,6 +107,7 @@ class PayrollService:
             alpha_deduction = (
                 (base_salary / working_days * alpha_days) if working_days > 0 else 0
             )
+
             gross_salary = base_salary - alpha_deduction
 
             record = await self.record_repo.create({
@@ -117,10 +118,10 @@ class PayrollService:
                 "present_days": present_days,
                 "leave_days": leave_days,
                 "alpha_days": alpha_days,
-                "gross_salary": round(gross_salary, 2),
+                "gross_salary": round(base_salary, 2),  
                 "total_allowances": 0,
                 "total_deductions": 0,
-                "net_salary": round(gross_salary, 2),
+                "net_salary": round(base_salary, 2),
                 "status": PayrollRecordStatus.DRAFT,
             })
 
