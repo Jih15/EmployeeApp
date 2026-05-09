@@ -15,7 +15,7 @@ import {
   ActivityFeed,
   TeamList,
 } from "@/component/ui/BentoCards";
-import { AlertItem, AlertType } from "@/component/types/Alerts";
+import { AlertItem, AlertType } from "@/types/Alerts";
 
 const dynAlertDefs: Record<string, Omit<AlertItem, "id">> = {
   info: { type: "info", title: "Site rebuild triggered", message: "Your site is rebuilding. Estimated 2 minutes." },

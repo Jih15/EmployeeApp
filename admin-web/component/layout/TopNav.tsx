@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface TopNavProps {
   onOpenCommand: () => void;
@@ -9,6 +10,7 @@ interface TopNavProps {
 const navItems = [
   {
     label: "Dashboard",
+    href: "/",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -19,36 +21,9 @@ const navItems = [
     ),
   },
   {
-    label: "Analytics",
-    icon: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-        <path d="M3 3v18h18" />
-        <path d="M7 16l4-4 4 4 5-5" />
-      </svg>
-    ),
-  },
-  {
-    label: "Pages",
-    count: "347",
-    icon: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-      </svg>
-    ),
-  },
-  {
-    label: "Media",
-    icon: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <circle cx="8.5" cy="8.5" r="1.5" />
-        <polyline points="21 15 16 10 5 21" />
-      </svg>
-    ),
-  },
-  {
-    label: "Team",
+    label: "Employees",
+    href: "/employees",
+    count: "128",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
@@ -58,7 +33,41 @@ const navItems = [
     ),
   },
   {
+    label: "Attendance",
+    href: "/attendance",
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+  },
+  {
+    label: "Leave",
+    href: "/leave",
+    count: "7",
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    label: "Payroll",
+    href: "/payroll",
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+      </svg>
+    ),
+  },
+  {
     label: "Settings",
+    href: "/settings",
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
         <circle cx="12" cy="12" r="3" />
@@ -69,7 +78,13 @@ const navItems = [
 ];
 
 export default function TopNav({ onOpenCommand }: TopNavProps) {
-  const [activeNav, setActiveNav] = useState("Dashboard");
+  // usePathname() dari next/navigation — otomatis reactive saat route berubah
+  const pathname = usePathname();
+
+  // Cek apakah route aktif:
+  // "/" hanya match exact, selain itu gunakan startsWith
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <nav id="topnav">
@@ -85,26 +100,27 @@ export default function TopNav({ onOpenCommand }: TopNavProps) {
         </div>
         <div>
           <div className="logo-name">Meridian</div>
-          <div className="logo-sub">CMS Platform · v3.1</div>
+          <div className="logo-sub">HR Portal · v1.0</div>
         </div>
         <div className="logo-divider" />
         <div style={{ fontSize: 11, color: "var(--slate2)", fontFamily: '"Fira Code", monospace' }}>
-          meridian.co
+          pt-meridian.co.id
         </div>
       </div>
 
-      {/* Nav Pills */}
+      {/* Nav Pills — setiap item adalah next/link */}
       <div className="nav-pills">
         {navItems.map((item) => (
-          <div
+          <Link
             key={item.label}
-            className={`pill${activeNav === item.label ? " active" : ""}`}
-            onClick={() => setActiveNav(item.label)}
+            href={item.href}
+            className={`pill${isActive(item.href) ? " active" : ""}`}
+            style={{ textDecoration: "none" }}
           >
             {item.icon}
             {item.label}
             {item.count && <span className="pill-count">{item.count}</span>}
-          </div>
+          </Link>
         ))}
       </div>
 

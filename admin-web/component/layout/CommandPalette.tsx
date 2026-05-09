@@ -7,19 +7,20 @@ interface Command {
   label: string;
   desc: string;
   short: string;
+  href?: string;
 }
 
 const cmds: Command[] = [
-  { icon: "📄", label: "New Page", desc: "Create a blank page", short: "N" },
-  { icon: "🚀", label: "Publish Now", desc: "Publish pending changes", short: "P" },
-  { icon: "📊", label: "Analytics", desc: "View analytics dashboard", short: "A" },
-  { icon: "🔍", label: "SEO Audit", desc: "Run a full SEO check", short: "S" },
-  { icon: "👥", label: "Invite Member", desc: "Add a new team member", short: "I" },
-  { icon: "📁", label: "Media Library", desc: "Browse uploaded media", short: "M" },
-  { icon: "⚙️", label: "Settings", desc: "Open system settings", short: "" },
-  { icon: "🗑️", label: "Trash", desc: "View deleted pages", short: "" },
-  { icon: "📝", label: "Blog Posts", desc: "Manage blog content", short: "B" },
-  { icon: "🔒", label: "Permissions", desc: "Manage roles & access", short: "" },
+  { icon: "👤", label: "Tambah Karyawan", desc: "Daftarkan karyawan baru", short: "N", href: "/employees/new" },
+  { icon: "📋", label: "Rekap Absensi", desc: "Lihat laporan kehadiran hari ini", short: "A", href: "/attendance" },
+  { icon: "🏖️", label: "Pengajuan Cuti", desc: "Buat pengajuan cuti baru", short: "L", href: "/leave/new" },
+  { icon: "💰", label: "Generate Payroll", desc: "Proses penggajian bulan ini", short: "P", href: "/payroll" },
+  { icon: "📊", label: "Dashboard", desc: "Kembali ke dashboard utama", short: "D", href: "/" },
+  { icon: "👥", label: "Daftar Karyawan", desc: "Kelola semua karyawan", short: "E", href: "/employees" },
+  { icon: "⚙️", label: "Pengaturan", desc: "Konfigurasi sistem HR", short: "", href: "/settings" },
+  { icon: "📁", label: "Dokumen", desc: "Kelola dokumen karyawan", short: "" },
+  { icon: "🔒", label: "Hak Akses", desc: "Atur role & permission", short: "" },
+  { icon: "📈", label: "Laporan", desc: "Export laporan HR", short: "" },
 ];
 
 interface CommandPaletteProps {
@@ -27,8 +28,6 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
-// Inner component — re-mounts fresh every time the palette opens,
-// so useState initializers act as the "reset" with no side-effectful setState.
 function CommandPaletteInner({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -42,13 +41,11 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
       )
     : cmds;
 
-  // Focus input on mount — this is fine because it's a DOM side-effect, not setState
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 40);
     return () => clearTimeout(t);
   }, []);
 
-  // Keyboard navigation — subscribes to external (DOM) events
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
@@ -58,6 +55,7 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
         e.preventDefault();
         setSelectedIdx((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter") {
+        // Bisa navigate ke href jika ada
         onClose();
       }
     };
@@ -69,26 +67,21 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
     <div
       id="cmdoverlay"
       className="open"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div id="cmdbox">
         <input
           ref={inputRef}
           id="cmdinput"
-          placeholder="Search pages, actions, team…"
+          placeholder="Cari karyawan, aksi, modul…"
           value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setSelectedIdx(0);
-          }}
+          onChange={(e) => { setQuery(e.target.value); setSelectedIdx(0); }}
         />
-        <div id="cmdresults" className="cmd-results">
-          <div className="cmd-section-lbl">Suggested Actions</div>
+        <div className="cmd-results">
+          <div className="cmd-section-lbl">Aksi & Navigasi</div>
           {filtered.length === 0 ? (
             <div style={{ padding: "24px", textAlign: "center", fontSize: 13, color: "var(--slate2)" }}>
-              No results found
+              Tidak ditemukan
             </div>
           ) : (
             filtered.map((item, i) => (
@@ -109,24 +102,11 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
           )}
         </div>
         <div className="cmd-footer">
-          <span className="cmd-hint">
-            <span className="kbd">↑↓</span> Navigate
-          </span>
-          <span className="cmd-hint">
-            <span className="kbd">↵</span> Select
-          </span>
-          <span className="cmd-hint">
-            <span className="kbd">ESC</span> Close
-          </span>
-          <span
-            style={{
-              marginLeft: "auto",
-              fontFamily: '"Fira Code", monospace',
-              fontSize: 9.5,
-              color: "var(--slate2)",
-            }}
-          >
-            Meridian CMS
+          <span className="cmd-hint"><span className="kbd">↑↓</span> Navigasi</span>
+          <span className="cmd-hint"><span className="kbd">↵</span> Pilih</span>
+          <span className="cmd-hint"><span className="kbd">ESC</span> Tutup</span>
+          <span style={{ marginLeft: "auto", fontFamily: '"Fira Code", monospace', fontSize: 9.5, color: "var(--slate2)" }}>
+            Meridian HR
           </span>
         </div>
       </div>
@@ -134,9 +114,6 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
   );
 }
 
-// Outer shell — mounts/unmounts the inner component when open changes.
-// This means state (query, selectedIdx) resets automatically on each open,
-// with no need for a setState-in-effect.
 export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   if (!open) return null;
   return <CommandPaletteInner key="cmd-palette" onClose={onClose} />;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AlertRow from "@/component/ui/AlertRow";
-import { AlertItem, AlertType } from "@/component/types/Alerts";
+import { AlertItem, AlertType } from "@/types/Alerts";
 
 const defaultAlerts: AlertItem[] = [
   { id: "1", type: "info", title: "Scheduled Maintenance", message: "System maintenance on May 10, 02:00–04:00 UTC." },

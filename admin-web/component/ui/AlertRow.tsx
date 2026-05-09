@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertItem, alertStyles } from "@/component/types/Alerts";
+import { AlertItem, alertStyles } from "@/types/Alerts";
 
 interface AlertRowProps {
   alert: AlertItem;
