@@ -1,14 +1,14 @@
 import { notFound } from "next/navigation";
 import { getEmployeeById } from "@/lib/mock/employee";
-import EmployeeDetailPage from "@/component/employees/EmployeeDetailPage";
+import EmployeeFormPage from "@/component/employees/EmployeeFormPage";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
-export default async function EmployeeRoute({ params }: Props) {
+export default async function EditEmployeeRoute({ params }: Props) {
   const { id } = await params;
   const employee = getEmployeeById(id);
   if (!employee) notFound();
-  return <EmployeeDetailPage employee={employee!} />;
+  return <EmployeeFormPage mode="edit" employee={employee!} />;
 }
