@@ -17,6 +17,7 @@ export default function AppShell({ children }: AppShellProps) {
   const isAuthPage = pathname.startsWith("/auth");
 
   useEffect(() => {
+    // ── Keyboard shortcut: ⌘K / Ctrl+K ──
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -24,8 +25,17 @@ export default function AppShell({ children }: AppShellProps) {
       }
       if (e.key === "Escape") setOpenCommand(false);
     };
+
+    // ── Custom event dari DashboardPage (dan halaman lain) ──
+    const handleOpenCommand = () => setOpenCommand(true);
+
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("meridian:openCommand", handleOpenCommand);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("meridian:openCommand", handleOpenCommand);
+    };
   }, []);
 
   if (isAuthPage) {

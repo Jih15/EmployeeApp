@@ -42,6 +42,11 @@ function useCountUp(target: number, delay = 350) {
   return value;
 }
 
+// Helper: dispatch custom event yang di-listen oleh AppShell
+function openCommandPalette() {
+  window.dispatchEvent(new CustomEvent("meridian:openCommand"));
+}
+
 export default function DashboardPage() {
   const [dynAlerts, setDynAlerts] = useState<AlertItem[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -89,7 +94,10 @@ export default function DashboardPage() {
           <button className="btn btn-outline btn-sm" onClick={() => showDynAlert("warning")}>
             ⚠ 4 SEO Issues
           </button>
-          <button className="btn btn-sapphire btn-sm">⌘ Command Palette</button>
+          {/* ✅ Sekarang terhubung ke CommandPalette lewat custom event */}
+          <button className="btn btn-sapphire btn-sm" onClick={openCommandPalette}>
+            ⌘ Command Palette
+          </button>
         </div>
       </div>
 

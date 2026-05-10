@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import "./auth.css";
+import "./login.css";
 
 // ─── Left Panel ────────────────────────────────────────────────────────────────
 function LeftPanel() {

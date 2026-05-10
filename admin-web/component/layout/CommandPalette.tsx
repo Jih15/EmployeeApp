@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface Command {
   icon: string;
@@ -29,6 +30,7 @@ interface CommandPaletteProps {
 }
 
 function CommandPaletteInner({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,13 +43,25 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
       )
     : cmds;
 
+  // Auto-focus input on mount
   useEffect(() => {
     const t = setTimeout(() => inputRef.current?.focus(), 40);
     return () => clearTimeout(t);
   }, []);
 
+  function navigate(cmd: Command) {
+    onClose();
+    if (cmd.href) router.push(cmd.href);
+  }
+
+  // Reset selection inline when query changes — no separate effect needed
+  function handleQueryChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setQuery(e.target.value);
+    setSelectedIdx(0);
+  }
+
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
+    function handleKey(e: KeyboardEvent) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIdx((i) => Math.min(i + 1, filtered.length - 1));
@@ -55,13 +69,15 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
         e.preventDefault();
         setSelectedIdx((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter") {
-        // Bisa navigate ke href jika ada
-        onClose();
+        e.preventDefault();
+        const cmd = filtered[selectedIdx];
+        if (cmd) navigate(cmd);
       }
-    };
+    }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [filtered.length, onClose]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, selectedIdx]);
 
   return (
     <div
@@ -75,10 +91,10 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
           id="cmdinput"
           placeholder="Cari karyawan, aksi, modul…"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setSelectedIdx(0); }}
+          onChange={handleQueryChange}
         />
         <div className="cmd-results">
-          <div className="cmd-section-lbl">Aksi & Navigasi</div>
+          <div className="cmd-section-lbl">Aksi &amp; Navigasi</div>
           {filtered.length === 0 ? (
             <div style={{ padding: "24px", textAlign: "center", fontSize: 13, color: "var(--slate2)" }}>
               Tidak ditemukan
@@ -88,7 +104,7 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
               <div
                 key={item.label}
                 className={`cmd-item${i === selectedIdx ? " sel" : ""}`}
-                onClick={onClose}
+                onClick={() => navigate(item)}
                 onMouseEnter={() => setSelectedIdx(i)}
               >
                 <div className="cmd-item-icon">{item.icon}</div>
@@ -97,13 +113,25 @@ function CommandPaletteInner({ onClose }: { onClose: () => void }) {
                   <div className="cmd-item-desc">{item.desc}</div>
                 </div>
                 {item.short && <div className="cmd-shortcut">⌘{item.short}</div>}
+                {/* Show arrow indicator for items with href */}
+                {item.href && (
+                  <div style={{
+                    marginLeft: 6,
+                    color: "var(--slate3)",
+                    fontSize: 11,
+                    opacity: i === selectedIdx ? 1 : 0,
+                    transition: "opacity 0.1s",
+                  }}>
+                    ↵
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
         <div className="cmd-footer">
           <span className="cmd-hint"><span className="kbd">↑↓</span> Navigasi</span>
-          <span className="cmd-hint"><span className="kbd">↵</span> Pilih</span>
+          <span className="cmd-hint"><span className="kbd">↵</span> Buka</span>
           <span className="cmd-hint"><span className="kbd">ESC</span> Tutup</span>
           <span style={{ marginLeft: "auto", fontFamily: '"Fira Code", monospace', fontSize: 9.5, color: "var(--slate2)" }}>
             Meridian HR
