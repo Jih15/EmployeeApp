@@ -1,5 +1,5 @@
-import LoginPage from "@/component/auth/AuthPage";
+import LoginPage from "@/component/auth/LoginPage";
 
 export default function AuthRoute() {
-    return <LoginPage />;
+  return <LoginPage />;
 }
