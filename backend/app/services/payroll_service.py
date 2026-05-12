@@ -103,12 +103,9 @@ class PayrollService:
             alpha_days = max(working_days - present_days - leave_days, 0)
 
             base_salary = float(profile.base_salary or 0)
-
             alpha_deduction = (
                 (base_salary / working_days * alpha_days) if working_days > 0 else 0
             )
-
-            gross_salary = base_salary - alpha_deduction
 
             record = await self.record_repo.create({
                 "employee_id": user.id,
@@ -118,14 +115,13 @@ class PayrollService:
                 "present_days": present_days,
                 "leave_days": leave_days,
                 "alpha_days": alpha_days,
-                "gross_salary": round(base_salary, 2),  
+                "gross_salary": round(base_salary, 2),
                 "total_allowances": 0,
                 "total_deductions": 0,
                 "net_salary": round(base_salary, 2),
                 "status": PayrollRecordStatus.DRAFT,
             })
 
-            # Buat komponen potongan absensi agar tetap tercatat setelah recalculate
             if alpha_deduction > 0:
                 await self.component_repo.create({
                     "payroll_record_id": record.id,
@@ -150,7 +146,10 @@ class PayrollService:
                 message="Finalisasi hanya bisa dilakukan saat periode berstatus PROCESSING.",
             )
 
-        records, _ = await self.record_repo.get_all(period_id=period_id, limit=9999)
+        # FIX: tambahkan skip=0 yang sebelumnya hilang
+        records, _ = await self.record_repo.get_all(
+            skip=0, limit=9999, period_id=period_id
+        )
         for record in records:
             if record.status == PayrollRecordStatus.DRAFT:
                 await self.record_repo.update(
@@ -271,6 +270,7 @@ class PayrollService:
     # ── Private Helpers ────────────────────────────────────────────────────────
 
     async def _recalculate(self, record: PayrollRecord) -> PayrollRecord:
+        # Reload untuk dapat components terbaru
         record = await self.record_repo.get_by_id(record.id)
 
         total_allowances = sum(
@@ -291,7 +291,7 @@ class PayrollService:
         count = 0
         current = start
         while current <= end:
-            if current.weekday() < 5:
+            if current.weekday() < 5:  # Senin–Jumat
                 count += 1
             current += timedelta(days=1)
         return count
