@@ -2,7 +2,7 @@
 // Satu sumber data mock yang di-share ke semua halaman employees.
 // Nantinya diganti dengan API call ke FastAPI.
 
-import { Employee } from "@/types/db-types/employee";
+import { Employee, EmployeeAccount } from "@/types/db-types/employee";
 
 
 export const MOCK_EMPLOYEES: Employee[] = [

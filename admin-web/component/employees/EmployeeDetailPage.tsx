@@ -22,6 +22,17 @@ function fmtDate(s: string) {
   });
 }
 
+function getMockAccount(emp: Employee) {
+  return {
+    email: emp.email,
+    isActive: emp.status === "active",
+    isVerified: true,
+    role: emp.role,
+    lastLogin: "2025-05-12T08:34:00",
+    createdAt: emp.joinDate,
+  };
+}
+
 const statusMap: Record<EmployeeStatus, { cls: string; label: string }> = {
   active: { cls: "b-live", label: "Aktif" },
   inactive: { cls: "b-draft", label: "Nonaktif" },
@@ -740,14 +751,296 @@ function TabRiwayat({ emp }: { emp: Employee }) {
   );
 }
 
+// ─── Tab: Akun Karyawan ───────────────────────────────────────────────────────
+function TabAkunKaryawan({ emp }: { emp: Employee }) {
+  const account = getMockAccount(emp);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const fmtDateTime = (iso: string) =>
+    new Date(iso).toLocaleString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const roleMap: Record<string, { cls: string; label: string }> = {
+    admin: { cls: "b-review", label: "Admin" },
+    hr: { cls: "b-live", label: "HR" },
+    employee: { cls: "b-draft", label: "Karyawan" },
+    manager: { cls: "b-live", label: "Manager" },
+  };
+  const roleInfo = roleMap[account.role] ?? { cls: "b-draft", label: account.role };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* Header info */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          padding: "14px 16px",
+          background: "var(--sapphire4)",
+          borderRadius: "var(--r)",
+          border: "1px solid rgba(37,99,235,0.15)",
+        }}
+      >
+        <div
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 10,
+            background: "var(--sapphire)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--sapphire)", marginBottom: 2 }}>
+            Akun Sistem Karyawan
+          </div>
+          <div style={{ fontSize: 11, color: "var(--slate2)", fontFamily: '"Fira Code", monospace' }}>
+            Dibuat: {fmtDateTime(account.createdAt)}
+          </div>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <span className={`badge ${account.isActive ? "b-live" : "b-draft"}`}>
+            <span className="bdot" />
+            {account.isActive ? "Aktif" : "Nonaktif"}
+          </span>
+          <span className={`badge ${account.isVerified ? "b-live" : "b-review"}`}>
+            <span className="bdot" />
+            {account.isVerified ? "Terverifikasi" : "Belum Verifikasi"}
+          </span>
+        </div>
+      </div>
+
+      {/* Grid field akun */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+        {/* Email */}
+        <div style={{ gridColumn: "span 2" }}>
+          <label className="f-label">Email Akun</label>
+          <div
+            style={{
+              padding: "9px 12px",
+              background: "var(--surface2)",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              fontSize: 12.5,
+              color: "var(--ink)",
+              fontFamily: '"Fira Code", monospace',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{account.email}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--slate2)" strokeWidth="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Password */}
+        <div style={{ gridColumn: "span 2" }}>
+          <label className="f-label">Password</label>
+          <div
+            style={{
+              padding: "9px 12px",
+              background: "var(--surface2)",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              fontSize: 12.5,
+              color: "var(--ink)",
+              fontFamily: '"Fira Code", monospace',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>{showPassword ? "p@ssw0rd_mock!" : "••••••••••••"}</span>
+            <button
+              onClick={() => setShowPassword((v) => !v)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                color: "var(--slate2)",
+              }}
+              title={showPassword ? "Sembunyikan" : "Tampilkan"}
+            >
+              {showPassword ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
+          <div style={{ fontSize: 10, color: "var(--slate2)", marginTop: 4 }}>
+            * Password hanya dapat diubah melalui fitur reset password
+          </div>
+        </div>
+
+        {/* Role */}
+        <div>
+          <label className="f-label">Role / Hak Akses</label>
+          <div
+            style={{
+              padding: "9px 12px",
+              background: "var(--surface2)",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              fontSize: 12.5,
+              color: "var(--ink)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span className={`badge ${roleInfo.cls}`}>
+              <span className="bdot" />
+              {roleInfo.label}
+            </span>
+            <span style={{ fontFamily: '"Fira Code", monospace', fontSize: 11, color: "var(--slate2)" }}>
+              {account.role}
+            </span>
+          </div>
+        </div>
+
+        {/* Last login */}
+        <div>
+          <label className="f-label">Login Terakhir</label>
+          <div
+            style={{
+              padding: "9px 12px",
+              background: "var(--surface2)",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+              fontSize: 12.5,
+              color: "var(--ink)",
+              fontFamily: '"Fira Code", monospace',
+            }}
+          >
+            {fmtDateTime(account.lastLogin)}
+          </div>
+        </div>
+
+        {/* Is Active */}
+        <div>
+          <label className="f-label">Status Akun</label>
+          <div
+            style={{
+              padding: "9px 12px",
+              background: account.isActive ? "var(--emerald3)" : "var(--surface2)",
+              border: `1px solid ${account.isActive ? "rgba(13,124,82,0.2)" : "var(--line)"}`,
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span className={`badge ${account.isActive ? "b-live" : "b-draft"}`}>
+              <span className="bdot" />
+              {account.isActive ? "Aktif" : "Nonaktif"}
+            </span>
+            <span style={{ fontSize: 11, color: account.isActive ? "var(--emerald)" : "var(--slate2)" }}>
+              {account.isActive ? "Akun dapat login" : "Akun diblokir"}
+            </span>
+          </div>
+        </div>
+
+        {/* Is Verified */}
+        <div>
+          <label className="f-label">Status Verifikasi Email</label>
+          <div
+            style={{
+              padding: "9px 12px",
+              background: account.isVerified ? "var(--emerald3)" : "var(--amber3)",
+              border: `1px solid ${account.isVerified ? "rgba(13,124,82,0.2)" : "rgba(180,110,0,0.2)"}`,
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span className={`badge ${account.isVerified ? "b-live" : "b-review"}`}>
+              <span className="bdot" />
+              {account.isVerified ? "Terverifikasi" : "Belum Verifikasi"}
+            </span>
+            {!account.isVerified && (
+              <span style={{ fontSize: 11, color: "var(--amber)" }}>Email belum dikonfirmasi</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          paddingTop: 12,
+          borderTop: "1px solid var(--line)",
+        }}
+      >
+        <button className="btn btn-primary btn-sm">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M21 2H3v16h5v4l4-4h5l4-4V2zm-10 9V7m5 4V7" />
+          </svg>
+          Reset Password
+        </button>
+        <button className="btn btn-ghost btn-sm">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z" />
+          </svg>
+          Ubah Role
+        </button>
+        {account.isActive ? (
+          <button className="btn btn-danger btn-sm" style={{ marginLeft: "auto" }}>
+            Nonaktifkan Akun
+          </button>
+        ) : (
+          <button className="btn btn-success btn-sm" style={{ marginLeft: "auto" }}>
+            Aktifkan Akun
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
-type TabKey = "profil" | "pekerjaan" | "dokumen" | "riwayat";
+type TabKey = "profil" | "pekerjaan" | "dokumen" | "riwayat" | "akun";
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "profil", label: "Profil Pribadi" },
   { key: "pekerjaan", label: "Pekerjaan & Absensi" },
   { key: "dokumen", label: "Dokumen" },
   { key: "riwayat", label: "Riwayat Karir" },
+  { key: "akun", label: "Akun Karyawan" }, 
 ];
 
 interface EmployeeDetailPageProps {
@@ -843,6 +1136,7 @@ export default function EmployeeDetailPage({ employee }: EmployeeDetailPageProps
                 {activeTab === "pekerjaan" && <TabPekerjaan emp={employee} />}
                 {activeTab === "dokumen" && <TabDokumen emp={employee} />}
                 {activeTab === "riwayat" && <TabRiwayat emp={employee} />}
+                {activeTab === "akun" && <TabAkunKaryawan emp={employee} />}
               </div>
             </div>
           </div>

@@ -21,6 +21,15 @@ export interface EmergencyContact {
   phone: string;
 }
 
+export interface EmployeeAccount {
+  email: string;
+  isActive: boolean;
+  isVerified: boolean;
+  role: Role;
+  lastLogin: string | null;
+  createdAt: string;
+}
+
 export interface EmployeeDocument {
   id: string;
   name: string;
