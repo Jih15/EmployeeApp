@@ -1,5 +1,3 @@
-import { notFound } from "next/navigation";
-import { getEmployeeById } from "@/lib/mock/employee";
 import EmployeeDetailPage from "@/component/employees/EmployeeDetailPage";
 
 interface Props {
@@ -8,7 +6,5 @@ interface Props {
 
 export default async function EmployeeRoute({ params }: Props) {
   const { id } = await params;
-  const employee = getEmployeeById(id);
-  if (!employee) notFound();
-  return <EmployeeDetailPage employee={employee!} />;
+  return <EmployeeDetailPage employeeId={id} />;
 }

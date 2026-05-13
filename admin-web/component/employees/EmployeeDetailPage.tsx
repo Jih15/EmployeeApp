@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Employee, DocumentStatus, EmployeeStatus } from "@/types/db-types/employee";
+import { Employee, DocumentStatus, EmployeeStatus, EmployeeAccount, EmployeeBackend } from "@/types/db-types/employee";
+import { useAuth } from "@/lib/context/AuthContext";
+import { getEmployeeAccount, getEmployeeById, mapToEmployee } from "@/lib/api/employee";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const NOW = Date.now();
@@ -20,17 +22,6 @@ function fmtDate(s: string) {
     month: "long",
     year: "numeric",
   });
-}
-
-function getMockAccount(emp: Employee) {
-  return {
-    email: emp.email,
-    isActive: emp.status === "active",
-    isVerified: true,
-    role: emp.role,
-    lastLogin: "2025-05-12T08:34:00",
-    createdAt: emp.joinDate,
-  };
 }
 
 const statusMap: Record<EmployeeStatus, { cls: string; label: string }> = {
@@ -107,7 +98,7 @@ function Sidebar({ emp }: { emp: Employee }) {
             Informasi
           </div>
           {[
-            { label: "ID Karyawan", val: emp.id, mono: true },
+            { label: "ID Karyawan", val: emp.employeeNumber, mono: true },
             { label: "NIK", val: emp.nik, mono: true },
             { label: "Departemen", val: emp.department },
             { label: "Email", val: emp.email, mono: true, small: true },
@@ -753,25 +744,60 @@ function TabRiwayat({ emp }: { emp: Employee }) {
 
 // ─── Tab: Akun Karyawan ───────────────────────────────────────────────────────
 function TabAkunKaryawan({ emp }: { emp: Employee }) {
-  const account = getMockAccount(emp);
+  const { getToken } = useAuth();
+  const [account, setAccount] = useState<EmployeeBackend | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    getEmployeeById(emp.id, token)
+      .then((data) => setAccount(data as unknown as EmployeeBackend))
+      .catch(() => setError("Gagal memuat data akun"))
+      .finally(() => setLoading(false));
+  }, [emp.id, getToken]);
 
   const fmtDateTime = (iso: string) =>
     new Date(iso).toLocaleString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      day: "numeric", month: "long", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
     });
 
   const roleMap: Record<string, { cls: string; label: string }> = {
-    admin: { cls: "b-review", label: "Admin" },
-    hr: { cls: "b-live", label: "HR" },
-    employee: { cls: "b-draft", label: "Karyawan" },
-    manager: { cls: "b-live", label: "Manager" },
+    super_admin: { cls: "b-review", label: "Super Admin" },
+    hr:          { cls: "b-live",   label: "HR" },
+    employee:    { cls: "b-draft",  label: "Karyawan" },
   };
+
+  if (loading) return (
+    <div style={{ padding: "40px 0", textAlign: "center", color: "var(--slate2)", fontSize: 13 }}>
+      Memuat data akun...
+    </div>
+  );
+
+  if (error || !account) return (
+    <div style={{ padding: "40px 0", textAlign: "center", color: "var(--ruby)", fontSize: 13 }}>
+      {error ?? "Data akun tidak ditemukan"}
+    </div>
+  );
+
   const roleInfo = roleMap[account.role] ?? { cls: "b-draft", label: account.role };
+
+
+  if (loading) return (
+    <div style={{ padding: "40px 0", textAlign: "center", color: "var(--slate2)", fontSize: 13 }}>
+      Memuat data akun...
+    </div>
+  );
+
+  if (error || !account) return (
+    <div style={{ padding: "40px 0", textAlign: "center", color: "var(--ruby)", fontSize: 13 }}>
+      {error ?? "Data akun tidak ditemukan"}
+    </div>   
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -810,17 +836,17 @@ function TabAkunKaryawan({ emp }: { emp: Employee }) {
             Akun Sistem Karyawan
           </div>
           <div style={{ fontSize: 11, color: "var(--slate2)", fontFamily: '"Fira Code", monospace' }}>
-            Dibuat: {fmtDateTime(account.createdAt)}
+            Dibuat: {fmtDateTime(account.created_at)}
           </div>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          <span className={`badge ${account.isActive ? "b-live" : "b-draft"}`}>
+          <span className={`badge ${account.is_active ? "b-live" : "b-draft"}`}>
             <span className="bdot" />
-            {account.isActive ? "Aktif" : "Nonaktif"}
+            {account.is_active ? "Aktif" : "Nonaktif"}
           </span>
-          <span className={`badge ${account.isVerified ? "b-live" : "b-review"}`}>
+          <span className={`badge ${account.is_verified ? "b-live" : "b-review"}`}>
             <span className="bdot" />
-            {account.isVerified ? "Terverifikasi" : "Belum Verifikasi"}
+            {account.is_verified ? "Terverifikasi" : "Belum Verifikasi"}
           </span>
         </div>
       </div>
@@ -943,7 +969,7 @@ function TabAkunKaryawan({ emp }: { emp: Employee }) {
               fontFamily: '"Fira Code", monospace',
             }}
           >
-            {fmtDateTime(account.lastLogin)}
+            {/* {fmtDateTime(account.lastLogin)} */}
           </div>
         </div>
 
@@ -953,20 +979,20 @@ function TabAkunKaryawan({ emp }: { emp: Employee }) {
           <div
             style={{
               padding: "9px 12px",
-              background: account.isActive ? "var(--emerald3)" : "var(--surface2)",
-              border: `1px solid ${account.isActive ? "rgba(13,124,82,0.2)" : "var(--line)"}`,
+              background: account.is_active ? "var(--emerald3)" : "var(--surface2)",
+              border: `1px solid ${account.is_active ? "rgba(13,124,82,0.2)" : "var(--line)"}`,
               borderRadius: 8,
               display: "flex",
               alignItems: "center",
               gap: 8,
             }}
           >
-            <span className={`badge ${account.isActive ? "b-live" : "b-draft"}`}>
+            <span className={`badge ${account.is_active ? "b-live" : "b-draft"}`}>
               <span className="bdot" />
-              {account.isActive ? "Aktif" : "Nonaktif"}
+              {account.is_active ? "Aktif" : "Nonaktif"}
             </span>
-            <span style={{ fontSize: 11, color: account.isActive ? "var(--emerald)" : "var(--slate2)" }}>
-              {account.isActive ? "Akun dapat login" : "Akun diblokir"}
+            <span style={{ fontSize: 11, color: account.is_active ? "var(--emerald)" : "var(--slate2)" }}>
+              {account.is_active ? "Akun dapat login" : "Akun diblokir"}
             </span>
           </div>
         </div>
@@ -977,19 +1003,19 @@ function TabAkunKaryawan({ emp }: { emp: Employee }) {
           <div
             style={{
               padding: "9px 12px",
-              background: account.isVerified ? "var(--emerald3)" : "var(--amber3)",
-              border: `1px solid ${account.isVerified ? "rgba(13,124,82,0.2)" : "rgba(180,110,0,0.2)"}`,
+              background: account.is_verified ? "var(--emerald3)" : "var(--amber3)",
+              border: `1px solid ${account.is_verified ? "rgba(13,124,82,0.2)" : "rgba(180,110,0,0.2)"}`,
               borderRadius: 8,
               display: "flex",
               alignItems: "center",
               gap: 8,
             }}
           >
-            <span className={`badge ${account.isVerified ? "b-live" : "b-review"}`}>
+            <span className={`badge ${account.is_verified ? "b-live" : "b-review"}`}>
               <span className="bdot" />
-              {account.isVerified ? "Terverifikasi" : "Belum Verifikasi"}
+              {account.is_verified ? "Terverifikasi" : "Belum Verifikasi"}
             </span>
-            {!account.isVerified && (
+            {!account.is_verified && (
               <span style={{ fontSize: 11, color: "var(--amber)" }}>Email belum dikonfirmasi</span>
             )}
           </div>
@@ -1018,7 +1044,7 @@ function TabAkunKaryawan({ emp }: { emp: Employee }) {
           </svg>
           Ubah Role
         </button>
-        {account.isActive ? (
+        {account.is_active ? (
           <button className="btn btn-danger btn-sm" style={{ marginLeft: "auto" }}>
             Nonaktifkan Akun
           </button>
@@ -1044,11 +1070,36 @@ const tabs: { key: TabKey; label: string }[] = [
 ];
 
 interface EmployeeDetailPageProps {
-  employee: Employee;
+  employeeId: string;
 }
 
-export default function EmployeeDetailPage({ employee }: EmployeeDetailPageProps) {
+export default function EmployeeDetailPage({ employeeId }: EmployeeDetailPageProps) {
+  const { getToken } = useAuth();
+  const [employee, setEmployee] = useState<EmployeeBackend | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>("profil");
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    getEmployeeById(employeeId, token)
+      .then(setEmployee)
+      .finally(() => setLoading(false));
+  }, [employeeId]);
+
+  if (loading) return (
+    <div style={{ padding: "80px 0", textAlign: "center", color: "var(--slate2)", fontSize: 13 }}>
+      Memuat data karyawan...
+    </div>
+  );
+
+  if (!employee) return (
+    <div style={{ padding: "80px 0", textAlign: "center", color: "var(--ruby)", fontSize: 13 }}>
+      Karyawan tidak ditemukan.
+    </div>
+  );
+
+  const emp = mapToEmployee(employee);
 
   return (
     <div id="content">
@@ -1068,7 +1119,7 @@ export default function EmployeeDetailPage({ employee }: EmployeeDetailPageProps
           Karyawan
         </Link>
         <span>›</span>
-        <span style={{ color: "var(--ink3)" }}>{employee.name}</span>
+        <span style={{ color: "var(--ink3)" }}>{emp.name}</span>
         <span
           style={{
             fontFamily: '"Fira Code", monospace',
@@ -1078,12 +1129,12 @@ export default function EmployeeDetailPage({ employee }: EmployeeDetailPageProps
             borderRadius: 4,
           }}
         >
-          {employee.id}
+          {emp.employeeNumber}
         </span>
       </div>
 
       <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <Sidebar emp={employee} />
+        <Sidebar emp={emp} />
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -1132,11 +1183,11 @@ export default function EmployeeDetailPage({ employee }: EmployeeDetailPageProps
               </div>
 
               <div style={{ padding: "20px 22px" }}>
-                {activeTab === "profil" && <TabProfil emp={employee} />}
-                {activeTab === "pekerjaan" && <TabPekerjaan emp={employee} />}
-                {activeTab === "dokumen" && <TabDokumen emp={employee} />}
-                {activeTab === "riwayat" && <TabRiwayat emp={employee} />}
-                {activeTab === "akun" && <TabAkunKaryawan emp={employee} />}
+                {activeTab === "profil" && <TabProfil emp={emp} />}
+                {activeTab === "pekerjaan" && <TabPekerjaan emp={emp} />}
+                {activeTab === "dokumen" && <TabDokumen emp={emp} />}
+                {activeTab === "riwayat" && <TabRiwayat emp={emp} />}
+                {activeTab === "akun" && <TabAkunKaryawan emp={emp} />}
               </div>
             </div>
           </div>

@@ -7,7 +7,7 @@ export type Department =
   | "Marketing"
   | "Operations";
 
-export type Role = "SuperAdmin" | "HR" | "Employee";
+export type Role = "super_admin" | "hr" | "employee";
 
 export type EmployeeStatus = "active" | "inactive" | "on-leave";
 
@@ -22,12 +22,14 @@ export interface EmergencyContact {
 }
 
 export interface EmployeeAccount {
+  id: string;
   email: string;
-  isActive: boolean;
-  isVerified: boolean;
+  hashed_password: string;
   role: Role;
-  lastLogin: string | null;
-  createdAt: string;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EmployeeDocument {
@@ -59,7 +61,7 @@ export interface CareerHistory {
 
 export interface Employee {
   id: string;
-  // Identitas
+  employeeNumber: string; 
   name: string;
   initials: string;
   avatarBg: string;
@@ -84,4 +86,40 @@ export interface Employee {
   documents: EmployeeDocument[];
   attendanceSummary: AttendanceSummary;
   careerHistory: CareerHistory[];
+}
+
+// Shape asli dari backend
+export interface EmployeeProfileBackend {
+  employee_id: string;
+  employee_number: string;
+  full_name: string;
+  phone: string;
+  address: string;
+  birth_date: string;
+  gender: string;
+  department: string;
+  position: string;
+  employment_type: string;
+  join_date: string;
+  end_date: string | null;
+  office_location_id: string;
+  base_salary: number;
+  bank_name: string;
+  bank_account_number: string;
+  bank_account_name: string;
+  tax_id: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  emergency_contact_relation: string;
+  updated_at: string;
+}
+
+export interface EmployeeBackend {
+  id: string;
+  email: string;
+  role: Role;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  profile: EmployeeProfileBackend;
 }

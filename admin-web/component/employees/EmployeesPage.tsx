@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Department, EmployeeStatus, Role } from "@/types/db-types/employee";
-import { MOCK_EMPLOYEES } from "@/lib/mock/employee";
+import { Department, Employee, EmployeeStatus, Role } from "@/types/db-types/employee";
+import { getEmployees } from "@/lib/api/employee";
+import { useAuth } from "@/lib/context/AuthContext";
+// import { MOCK_EMPLOYEES } from "@/lib/mock/employee";
 
 const statusMap: Record<EmployeeStatus, { cls: string; label: string; dot: string }> = {
   active: { cls: "b-live", label: "Aktif", dot: "var(--emerald2)" },
@@ -12,9 +14,9 @@ const statusMap: Record<EmployeeStatus, { cls: string; label: string; dot: strin
 };
 
 const roleColors: Record<Role, { bg: string; color: string }> = {
-  SuperAdmin: { bg: "var(--sapphire4)", color: "var(--sapphire)" },
-  HR: { bg: "var(--emerald3)", color: "var(--emerald)" },
-  Employee: { bg: "var(--line2)", color: "var(--slate)" },
+  super_admin: { bg: "var(--sapphire4)", color: "var(--sapphire)" },
+  hr: { bg: "var(--emerald3)", color: "var(--emerald)" },
+  employee: { bg: "var(--line2)", color: "var(--slate)" },
 };
 
 const deptList: Array<Department | "Semua"> = [
@@ -66,16 +68,16 @@ function Avatar({ bg, color, initials }: { bg: string; color: string; initials: 
   );
 }
 
-function StatsRow() {
-  const active = MOCK_EMPLOYEES.filter((e) => e.status === "active").length;
-  const onLeave = MOCK_EMPLOYEES.filter((e) => e.status === "on-leave").length;
-  const inactive = MOCK_EMPLOYEES.filter((e) => e.status === "inactive").length;
+function StatsRow({ employees }: {employees: Employee[]}) {
+  const active = employees.filter((e) => e.status === "active").length;
+  const onLeave = employees.filter((e) => e.status === "on-leave").length;
+  const inactive = employees.filter((e) => e.status === "inactive").length;
 
   const stats = [
     {
       label: "Total Karyawan",
       value: "128",
-      sub: `${MOCK_EMPLOYEES.length} data tersedia`,
+      sub: `${employees.length} data tersedia`,
       pip: "var(--sapphire)",
       trend: "t-up",
       arrow: "↑",
@@ -143,37 +145,44 @@ function StatsRow() {
 }
 
 export default function EmployeesPage() {
+  const { getToken } = useAuth();
+  const [employees, setEmployee] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeDept, setActiveDept] = useState<Department | "Semua">("Semua");
   const [activeStatus, setActiveStatus] = useState<EmployeeStatus | "all">("all");
   const [sortCol, setSortCol] = useState<"name" | "joinDate" | "salary" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    getEmployees(token)
+      .then(({ employees, total }) => {
+        setEmployee(employees);
+        setTotal(total);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   function handleSort(col: "name" | "joinDate" | "salary") {
     if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortCol(col); setSortDir("asc"); }
   }
 
-  const filtered = MOCK_EMPLOYEES.filter((e) => {
+  const filtered = employees.filter((e) => {
+    if (!e?.name || !e?.email) return false;
     const q = search.toLowerCase();
     const matchSearch =
-      e.name.toLowerCase().includes(q) ||
-      e.email.toLowerCase().includes(q) ||
-      e.id.toLowerCase().includes(q) ||
-      e.position.toLowerCase().includes(q);
+      (e.name ?? "").toLowerCase().includes(q) ||
+      (e.email ?? "").toLowerCase().includes(q) ||
+      (e.id ?? "").toLowerCase().includes(q) ||
+      (e.position ?? "").toLowerCase().includes(q);
     const matchDept = activeDept === "Semua" || e.department === activeDept;
     const matchStatus = activeStatus === "all" || e.status === activeStatus;
     return matchSearch && matchDept && matchStatus;
-  }).sort((a, b) => {
-    if (!sortCol) return 0;
-    let va: string | number = "", vb: string | number = "";
-    if (sortCol === "name") { va = a.name; vb = b.name; }
-    else if (sortCol === "joinDate") { va = a.joinDate; vb = b.joinDate; }
-    else if (sortCol === "salary") { va = a.salary; vb = b.salary; }
-    if (va < vb) return sortDir === "asc" ? -1 : 1;
-    if (va > vb) return sortDir === "asc" ? 1 : -1;
-    return 0;
-  });
+  })
 
   // plain function, not a component — avoids "created during render" error
   function sortIcon(col: "name" | "joinDate" | "salary") {
@@ -241,7 +250,7 @@ export default function EmployeesPage() {
         </div>
       </div>
 
-      <StatsRow />
+      <StatsRow employees={employees} />
 
       {/* Table Card */}
       <div
@@ -468,7 +477,7 @@ export default function EmployeesPage() {
 
                     return (
                       <tr
-                        key={emp.id}
+                        key={emp.employeeNumber}
                         style={{
                           borderBottom:
                             idx < filtered.length - 1
@@ -572,7 +581,7 @@ export default function EmployeesPage() {
                               marginTop: 2,
                             }}
                           >
-                            {emp.id}
+                            {emp.employeeNumber}
                           </div>
                         </td>
 
@@ -730,7 +739,7 @@ export default function EmployeesPage() {
               >
                 Menampilkan{" "}
                 <strong style={{ color: "var(--ink3)" }}>{filtered.length}</strong> dari{" "}
-                <strong style={{ color: "var(--ink3)" }}>128</strong> karyawan
+                <strong style={{ color: "var(--ink3)" }}>{total}</strong> karyawan
               </span>
               {search && (
                 <button

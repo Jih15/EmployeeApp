@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,13 +10,17 @@ import {
   EmployeeStatus,
   Gender,
 } from "@/types/db-types/employee";
+import { useAuth } from "@/lib/context/AuthContext";
+import { createEmployee, deactivateEmployee, getEmployeeById, updateEmployeeProfile } from "@/lib/api/employee";
 
 interface EmployeeFormPageProps {
   mode: "create" | "edit";
   employee?: Employee;
+  employeeId?: string; // ← tambah
 }
 
 type FormData = {
+  employeeNumber: string;
   name: string;
   nik: string;
   birthPlace: string;
@@ -37,13 +41,21 @@ type FormData = {
 };
 
 const DEPARTMENTS: Department[] = ["Engineering", "HR", "Finance", "Marketing", "Operations"];
-const ROLES: Role[] = ["SuperAdmin", "HR", "Employee"];
+const ROLES: { value: string; label: string }[] = [
+  { value: "super_admin", label: "Super Admin" },
+  { value: "hr", label: "HR" },
+  { value: "employee", label: "Karyawan" },
+];
+
 const STATUSES: { value: EmployeeStatus; label: string }[] = [
   { value: "active", label: "Aktif" },
   { value: "inactive", label: "Nonaktif" },
   { value: "on-leave", label: "Cuti" },
 ];
-const GENDERS: Gender[] = ["Laki-laki", "Perempuan"];
+const GENDERS: { value: string; label: string }[] = [
+  { value: "M", label: "Laki-laki" },
+  { value: "F", label: "Perempuan" },
+];
 
 function Section({
   title,
@@ -105,11 +117,12 @@ function fmtIDR(n: number) {
   }).format(n);
 }
 
-export default function EmployeeFormPage({ mode, employee }: EmployeeFormPageProps) {
+export default function EmployeeFormPage({ mode, employee, employeeId }: EmployeeFormPageProps) {
   const router = useRouter();
   const isEdit = mode === "edit";
 
   const [form, setForm] = useState<FormData>({
+    employeeNumber: employee?.id ?? "",
     name: employee?.name ?? "",
     nik: employee?.nik ?? "",
     birthPlace: employee?.birthPlace ?? "",
@@ -132,6 +145,10 @@ export default function EmployeeFormPage({ mode, employee }: EmployeeFormPagePro
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(mode === "edit" && !employee);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const { getToken } = useAuth();
 
   const set = (key: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -158,23 +175,128 @@ export default function EmployeeFormPage({ mode, employee }: EmployeeFormPagePro
     return errs;
   }
 
-  function handleSubmit() {
+  async function handleDeactivate() {
+    if (!confirm("Nonaktifkan karyawan ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    const token = getToken();
+    if (!token || !employee) return;
+    setDeactivating(true);
+    try {
+      await deactivateEmployee(employee.id, token);
+      router.push("/employees");
+    } catch {
+      alert("Gagal menonaktifkan karyawan.");
+    } finally {
+      setDeactivating(false);
+    }
+  }
+
+  async function handleSubmit() {
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
+
+    const token = getToken();
+    if (!token) return;
+
     setSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      if (isEdit && employee) {
+        // Update profile
+        await updateEmployeeProfile(employee.id, token, {
+          full_name: form.name,
+          phone: form.phone,
+          address: form.address,
+          birth_date: form.birthDate || undefined,
+          gender: form.gender || undefined,
+          department: form.department || undefined,
+          position: form.position || undefined,
+          join_date: form.joinDate || undefined,
+          base_salary: form.salary ? Number(form.salary) : undefined,
+          tax_id: form.nik || undefined,
+          emergency_contact_name: form.emergencyName || undefined,
+          emergency_contact_phone: form.emergencyPhone || undefined,
+          emergency_contact_relation: form.emergencyRelation || undefined,
+        });
+      } else {
+        // Create baru
+        const result = await createEmployee(token, {
+          full_name: form.name,
+          employee_number: form.employeeNumber,
+          phone: form.phone || undefined,
+          address: form.address || undefined,
+          birth_date: form.birthDate || undefined,
+          gender: form.gender || undefined,
+          department: form.department || undefined,
+          position: form.position || undefined,
+          join_date: form.joinDate || undefined,
+          base_salary: form.salary ? Number(form.salary) : undefined,
+          tax_id: form.nik || undefined,
+          emergency_contact_name: form.emergencyName || undefined,
+          emergency_contact_phone: form.emergencyPhone || undefined,
+          emergency_contact_relation: form.emergencyRelation || undefined,
+          email: form.email || undefined,
+          role: form.role || undefined,
+        });
+
+        // Tampilkan generated_password jika ada
+        if (result.generated_password) {
+          setGeneratedPassword(result.generated_password);
+          return; // jangan redirect dulu, tampilkan password ke HR
+        }
+      }
+
       setSaved(true);
       setTimeout(() => {
         router.push(isEdit ? `/employees/${employee?.id}` : "/employees");
       }, 1200);
-    }, 900);
+    } catch (err) {
+      setErrors({ name: "Gagal menyimpan. Coba lagi." });
+    } finally {
+      setSaving(false);
+    }
   }
 
+  useEffect(() => {
+    if (mode !== "edit" || !employeeId || employee) return;
+    const token = getToken();
+    if (!token) return;
+
+    getEmployeeById(employeeId, token)
+      .then((raw) => {
+        const p = raw.profile;
+        setForm({
+          employeeNumber: p.employee_number,
+          name: p.full_name,
+          nik: p.tax_id ?? "",
+          birthPlace: "",
+          birthDate: p.birth_date ?? "",
+          gender: p.gender as Gender ?? "",
+          address: p.address ?? "",
+          phone: p.phone ?? "",
+          email: raw.email,
+          department: p.department as Department ?? "",
+          role: raw.role as Role ?? "",
+          position: p.position ?? "",
+          status: raw.is_active ? "active" : "inactive",
+          joinDate: p.join_date ?? "",
+          salary: p.base_salary?.toString() ?? "",
+          emergencyName: p.emergency_contact_name ?? "",
+          emergencyRelation: p.emergency_contact_relation ?? "",
+          emergencyPhone: p.emergency_contact_phone ?? "",
+        });
+      })
+      .finally(() => setFetchLoading(false));
+  }, [employeeId]);
+
+  if (fetchLoading) return (
+    <div style={{ padding: "80px 0", textAlign: "center", color: "var(--slate2)", fontSize: 13 }}>
+      <div style={{ fontSize: 24, marginBottom: 12 }}>⏳</div>
+      Memuat data karyawan...
+    </div>
+  );
+  
   const inputStyle = (key: keyof FormData) => ({
     borderColor: errors[key] ? "var(--ruby2)" : undefined,
     boxShadow: errors[key] ? "0 0 0 3px var(--ruby3)" : undefined,
@@ -182,6 +304,53 @@ export default function EmployeeFormPage({ mode, employee }: EmployeeFormPagePro
 
   return (
     <div id="content">
+      {/* Modal generated password */}
+      {generatedPassword && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999,
+        }}>
+          <div className="card" style={{ width: 420, borderRadius: "var(--r3)" }}>
+            <div className="card-inner" style={{ padding: "24px 28px", gap: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--navy)" }}>
+                ✅ Karyawan Berhasil Dibuat
+              </div>
+              <div style={{
+                background: "var(--amber3)",
+                border: "1px solid rgba(217,119,6,0.3)",
+                borderRadius: "var(--r)", padding: "14px 16px",
+              }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, color: "var(--amber)",
+                  marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.07em",
+                }}>
+                  ⚠️ Password Auto-Generate — Catat & Sampaikan ke Karyawan
+                </div>
+                <div style={{
+                  fontFamily: '"Fira Code", monospace', fontSize: 20, fontWeight: 700,
+                  color: "var(--navy)", letterSpacing: "0.1em", padding: "8px 0",
+                }}>
+                  {generatedPassword}
+                </div>
+                <div style={{ fontSize: 10.5, color: "var(--amber)", marginTop: 4 }}>
+                  Password ini hanya muncul sekali dan tidak tersimpan di database.
+                </div>
+              </div>
+              <button
+                className="btn btn-primary"
+                style={{ width: "100%" }}
+                onClick={() => {
+                  setGeneratedPassword(null);
+                  router.push("/employees");
+                }}
+              >
+                Sudah Dicatat, Lanjut →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <div
         style={{
@@ -287,6 +456,20 @@ export default function EmployeeFormPage({ mode, employee }: EmployeeFormPagePro
           {/* Identitas Pribadi */}
           <Section title="Identitas Pribadi" pip="var(--sapphire)">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <Field label="Nomor Karyawan" required={!isEdit}>
+                <input
+                  className="f-input"
+                  placeholder="Contoh: EMP-001"
+                  value={form.employeeNumber}
+                  onChange={set("employeeNumber")}
+                  disabled={isEdit} // tidak bisa diubah setelah dibuat
+                  style={{
+                    fontFamily: '"Fira Code", monospace',
+                    opacity: isEdit ? 0.6 : 1,
+                  }}
+                />
+              </Field>
+
               <Field label="Nama Lengkap" required span>
                 <input
                   className="f-input"
@@ -332,7 +515,7 @@ export default function EmployeeFormPage({ mode, employee }: EmployeeFormPagePro
                 <select className="f-input f-select" value={form.gender} onChange={set("gender")}>
                   <option value="">— Pilih —</option>
                   {GENDERS.map((g) => (
-                    <option key={g} value={g}>{g}</option>
+                    <option key={g.value} value={g.value}>{g.label}</option>
                   ))}
                 </select>
               </Field>
@@ -392,15 +575,10 @@ export default function EmployeeFormPage({ mode, employee }: EmployeeFormPagePro
               </Field>
 
               <Field label="Role Sistem" required>
-                <select
-                  className="f-input f-select"
-                  value={form.role}
-                  onChange={set("role")}
-                  style={inputStyle("role")}
-                >
+                <select className="f-input f-select" value={form.role} onChange={set("role")}>
                   <option value="">— Pilih Role —</option>
                   {ROLES.map((r) => (
-                    <option key={r} value={r}>{r}</option>
+                    <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>
                 {errors.role && <div style={{ fontSize: 10.5, color: "var(--ruby2)", marginTop: 4 }}>{errors.role}</div>}
@@ -708,8 +886,13 @@ export default function EmployeeFormPage({ mode, employee }: EmployeeFormPagePro
                 <div style={{ fontSize: 11.5, color: "var(--slate2)", marginBottom: 10 }}>
                   Tindakan ini tidak dapat dibatalkan. Lanjutkan dengan hati-hati.
                 </div>
-                <button className="btn btn-danger" style={{ width: "100%", fontSize: 11.5 }}>
-                  Nonaktifkan Karyawan Ini
+                <button
+                  className="btn btn-danger"
+                  style={{ width: "100%", fontSize: 11.5 }}
+                  onClick={handleDeactivate}
+                  disabled={deactivating}
+                >
+                  {deactivating ? "Menonaktifkan..." : "Nonaktifkan Karyawan Ini"}
                 </button>
               </div>
             </div>
